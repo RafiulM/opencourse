@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  backend:
+    build: 
+      context: .
+      target: production
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL} # Use environment variable for database connection
+    restart: unless-stopped

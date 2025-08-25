@@ -1,0 +1,7 @@
+// Export all schemas
+export * from './auth';
+export * from './community';
+export * from './course';
+export * from './enrollment';
+export * from './quiz';
+export * from './scoreboard';
