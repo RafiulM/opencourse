@@ -7,6 +7,7 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "@/lib/auth";
 import swaggerUi from 'swagger-ui-express';
 import swaggerJSDoc from 'swagger-jsdoc';
+import basicAuth from 'express-basic-auth';
 
 // Import routes
 import apiRouter from './routes/index';
@@ -127,15 +128,68 @@ app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'OpenCourse API Documentation'
-}));
+// Documentation configuration
+const isProduction = process.env.NODE_ENV === 'production';
+const enableDocs = process.env.ENABLE_DOCS === 'true';
+const protectDocs = process.env.PROTECT_DOCS === 'true';
 
-app.get('/api-docs.json', (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  res.send(swaggerSpec);
-});
+// In production, docs are disabled by default unless explicitly enabled
+const shouldShowDocs = !isProduction || enableDocs;
+
+if (shouldShowDocs) {
+  // Basic Auth middleware for API documentation (when protection is enabled)
+  const docsAuth = basicAuth({
+    users: {
+      [process.env.DOCS_USERNAME || 'admin']: process.env.DOCS_PASSWORD || 'password123'
+    },
+    challenge: true,
+    realm: 'OpenCourse API Documentation',
+    unauthorizedResponse: (req) => {
+      return {
+        error: 'Unauthorized',
+        message: 'API documentation requires authentication',
+        hint: 'Contact your administrator for access credentials'
+      };
+    }
+  });
+
+  // Apply protection if enabled
+  if (protectDocs) {
+    app.use('/api-docs', docsAuth);
+    app.use('/api-docs.json', docsAuth);
+  }
+
+  // Serve documentation
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'OpenCourse API Documentation',
+    swaggerOptions: {
+      persistAuthorization: true,
+      displayRequestDuration: true,
+      docExpansion: 'list',
+      filter: true,
+      showExtensions: true,
+      showCommonExtensions: true
+    }
+  }));
+
+  app.get('/api-docs.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(swaggerSpec);
+  });
+} else {
+  // In production, return 404 for documentation endpoints
+  const productionDocsHandler = (req: any, res: any) => {
+    res.status(404).json({
+      error: 'Not Found',
+      message: 'API documentation is not available in production',
+      hint: 'Contact your administrator if you need API documentation access'
+    });
+  };
+
+  app.get('/api-docs*', productionDocsHandler);
+  app.get('/api-docs.json', productionDocsHandler);
+}
 
 /**
  * @swagger

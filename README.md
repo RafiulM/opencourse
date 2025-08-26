@@ -373,7 +373,40 @@ docker build -t opencourse-backend apps/backend
 
 ## 📝 API Documentation
 
-Visit http://localhost:5000/api-docs when running the backend to explore the API documentation.
+The API documentation is available via Swagger UI with configurable security settings.
+
+### 🔐 Documentation Security
+
+The API documentation has enhanced security features:
+
+**Configuration Options:**
+```env
+# Documentation Configuration
+ENABLE_DOCS=true              # Enable/disable docs completely
+PROTECT_DOCS=true             # Enable basic authentication
+DOCS_USERNAME=admin           # Documentation username  
+DOCS_PASSWORD=secure_password # Documentation password
+```
+
+**Security Behavior:**
+- **Development**: Docs enabled by default, protection configurable
+- **Production**: Docs **disabled by default** for maximum security
+- **Protection**: HTTP Basic Auth when `PROTECT_DOCS=true`
+
+**Access Levels:**
+| Environment | ENABLE_DOCS | PROTECT_DOCS | Result |
+|-------------|-------------|--------------|---------|
+| Development | undefined   | true         | 🔐 Protected docs |
+| Development | false       | any          | 🚫 No docs |
+| Production  | undefined   | any          | 🚫 **No docs (secure default)** |
+| Production  | true        | true         | 🔐 Protected docs |
+| Production  | true        | false        | ⚠️ Unprotected (not recommended) |
+
+### Accessing Documentation
+
+**Development:** http://localhost:5000/api-docs (with auth if protected)
+
+**Production:** Disabled by default - set `ENABLE_DOCS=true` only if needed
 
 ### Authentication Endpoints
 
