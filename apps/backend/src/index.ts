@@ -12,6 +12,9 @@ import basicAuth from 'express-basic-auth';
 // Import routes
 import apiRouter from './routes/index';
 
+// Import error handling middleware
+import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -307,6 +310,10 @@ app.post('/api/test', (req, res) => {
 
 // API Routes
 app.use('/api', apiRouter);
+
+// Error handling middleware - must be after all routes
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

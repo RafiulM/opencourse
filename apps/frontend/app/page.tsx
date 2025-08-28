@@ -9,6 +9,7 @@ import { LogOut, BookOpen } from "lucide-react"
 
 export default function Home() {
   const { data: session } = useSession()
+  console.log("home session", session)
 
   const getInitials = (name: string) => {
     return name

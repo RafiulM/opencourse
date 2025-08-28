@@ -1,5 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { CommunityService, CommunityMemberService } from '../services/community';
+import { AppError, formatErrorResponse, handleDatabaseError } from '../lib/errors';
+import { 
+  validateCommunityData, 
+  validateCommunityUpdateData, 
+  validateAddMemberData,
+  validatePaginationParams 
+} from '../lib/validation';
+import { authenticate, optionalAuth } from '../middleware/auth';
 
 const router: Router = Router();
 
@@ -46,12 +54,32 @@ const router: Router = Router();
  *       500:
  *         description: Internal server error
  */
-router.post('/', async (req, res) => {
+router.post('/', authenticate, async (req, res) => {
   try {
-    const community = await CommunityService.createCommunity(req.body);
-    res.status(201).json(community);
+    validateCommunityData(req.body);
+    
+    // Add createdBy from authenticated user
+    const communityData = {
+      ...req.body,
+      createdBy: req.user!.id
+    };
+    
+    const community = await CommunityService.createCommunity(communityData);
+    res.status(201).json({ 
+      success: true,
+      data: community,
+      message: 'Community created successfully'
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+    
+    // Handle database errors
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
   }
 });
 
@@ -81,17 +109,67 @@ router.post('/', async (req, res) => {
  *       200:
  *         description: List of communities
  */
-router.get('/', async (req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
   try {
     const { page = 1, pageSize = 20, privacy } = req.query;
+    validatePaginationParams(page, pageSize);
+    
     const communities = await CommunityService.getAllCommunities(
       Number(page), 
       Number(pageSize), 
       privacy as any
     );
-    res.json(communities);
+    
+    res.json({
+      success: true,
+      data: communities,
+      pagination: {
+        page: Number(page),
+        pageSize: Number(pageSize)
+      }
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+    
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
+  }
+});
+
+/**
+ * @swagger
+ * /api/communities/my:
+ *   get:
+ *     summary: Get current user's communities
+ *     tags: [Communities]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of current user's communities
+ *       401:
+ *         description: Authentication required
+ */
+router.get('/my', authenticate, async (req, res) => {
+  try {
+    const communities = await CommunityService.getCommunitiesByUser(req.user!.id);
+    res.json({
+      success: true,
+      data: communities
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+    
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
   }
 });
 
@@ -113,15 +191,29 @@ router.get('/', async (req, res) => {
  *       404:
  *         description: Community not found
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', optionalAuth, async (req, res) => {
   try {
     const community = await CommunityService.getCommunityById(req.params.id);
     if (!community) {
-      return res.status(404).json({ error: 'Community not found' });
+      const errorResponse = formatErrorResponse(
+        new AppError('Community not found', 404, 'RESOURCE_NOT_FOUND' as any)
+      );
+      return res.status(404).json(errorResponse);
     }
-    res.json(community);
+    
+    res.json({
+      success: true,
+      data: community
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+    
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
   }
 });
 
@@ -143,15 +235,29 @@ router.get('/:id', async (req, res) => {
  *       404:
  *         description: Community not found
  */
-router.get('/slug/:slug', async (req, res) => {
+router.get('/slug/:slug', optionalAuth, async (req, res) => {
   try {
     const community = await CommunityService.getCommunityBySlug(req.params.slug);
     if (!community) {
-      return res.status(404).json({ error: 'Community not found' });
+      const errorResponse = formatErrorResponse(
+        new AppError('Community not found', 404, 'RESOURCE_NOT_FOUND' as any)
+      );
+      return res.status(404).json(errorResponse);
     }
-    res.json(community);
+    
+    res.json({
+      success: true,
+      data: community
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+    
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
   }
 });
 
@@ -197,15 +303,34 @@ router.get('/slug/:slug', async (req, res) => {
  *       404:
  *         description: Community not found
  */
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticate, async (req, res) => {
   try {
+    validateCommunityUpdateData(req.body);
+    
+    // TODO: Add ownership check - only community creator or owners should be able to update
+    
     const community = await CommunityService.updateCommunity(req.params.id, req.body);
     if (!community) {
-      return res.status(404).json({ error: 'Community not found' });
+      const errorResponse = formatErrorResponse(
+        new AppError('Community not found', 404, 'RESOURCE_NOT_FOUND' as any)
+      );
+      return res.status(404).json(errorResponse);
     }
-    res.json(community);
+    
+    res.json({
+      success: true,
+      data: community,
+      message: 'Community updated successfully'
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+    
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
   }
 });
 
@@ -227,15 +352,32 @@ router.put('/:id', async (req, res) => {
  *       404:
  *         description: Community not found
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticate, async (req, res) => {
   try {
+    // TODO: Add ownership check - only community creator should be able to delete
+    
     const community = await CommunityService.deleteCommunity(req.params.id);
     if (!community) {
-      return res.status(404).json({ error: 'Community not found' });
+      const errorResponse = formatErrorResponse(
+        new AppError('Community not found', 404, 'RESOURCE_NOT_FOUND' as any)
+      );
+      return res.status(404).json(errorResponse);
     }
-    res.json({ message: 'Community deleted successfully', community });
+    
+    res.json({
+      success: true,
+      data: community,
+      message: 'Community deleted successfully'
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+    
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
   }
 });
 
@@ -255,12 +397,24 @@ router.delete('/:id', async (req, res) => {
  *       200:
  *         description: List of user's communities
  */
-router.get('/user/:userId', async (req, res) => {
+router.get('/user/:userId', authenticate, async (req, res) => {
   try {
+    // Users can only see their own communities or public ones
+    // For now, allow access to any user's communities (may need privacy controls later)
     const communities = await CommunityService.getCommunitiesByUser(req.params.userId);
-    res.json(communities);
+    res.json({
+      success: true,
+      data: communities
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+    
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
   }
 });
 
@@ -296,15 +450,32 @@ router.get('/user/:userId', async (req, res) => {
  *       201:
  *         description: Member added successfully
  */
-router.post('/:id/members', async (req, res) => {
+router.post('/:id/members', authenticate, async (req, res) => {
   try {
-    const member = await CommunityMemberService.addMember({
+    validateAddMemberData(req.body);
+    
+    // Add authenticated user to community (self-join)
+    const memberData = {
       communityId: req.params.id,
-      ...req.body
+      userId: req.user!.id,
+      role: req.body.role || 'member'
+    };
+    
+    const member = await CommunityMemberService.addMember(memberData);
+    res.status(201).json({
+      success: true,
+      data: member,
+      message: 'Successfully joined community'
     });
-    res.status(201).json(member);
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+    
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
   }
 });
 
@@ -334,17 +505,34 @@ router.post('/:id/members', async (req, res) => {
  *       200:
  *         description: List of community members
  */
-router.get('/:id/members', async (req, res) => {
+router.get('/:id/members', optionalAuth, async (req, res) => {
   try {
     const { page = 1, pageSize = 50 } = req.query;
+    validatePaginationParams(page, pageSize);
+    
     const members = await CommunityMemberService.getCommunityMembers(
       req.params.id, 
       Number(page), 
       Number(pageSize)
     );
-    res.json(members);
+    
+    res.json({
+      success: true,
+      data: members,
+      pagination: {
+        page: Number(page),
+        pageSize: Number(pageSize)
+      }
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+    
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
   }
 });
 
@@ -379,15 +567,39 @@ router.get('/:id/members', async (req, res) => {
  *       200:
  *         description: Member role updated successfully
  */
-router.put('/:id/members/:memberId', async (req, res) => {
+router.put('/:id/members/:memberId', authenticate, async (req, res) => {
   try {
+    if (req.body.role && !['owner', 'moderator', 'member'].includes(req.body.role)) {
+      const errorResponse = formatErrorResponse(
+        new AppError('Role must be one of: owner, moderator, member', 400, 'VALIDATION_ERROR' as any)
+      );
+      return res.status(400).json(errorResponse);
+    }
+    
+    // TODO: Add permission check - only owners/moderators should be able to update roles
+    
     const member = await CommunityMemberService.updateMemberRole(req.params.memberId, req.body);
     if (!member) {
-      return res.status(404).json({ error: 'Member not found' });
+      const errorResponse = formatErrorResponse(
+        new AppError('Member not found', 404, 'RESOURCE_NOT_FOUND' as any)
+      );
+      return res.status(404).json(errorResponse);
     }
-    res.json(member);
+    
+    res.json({
+      success: true,
+      data: member,
+      message: 'Member role updated successfully'
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+    
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
   }
 });
 
@@ -412,15 +624,33 @@ router.put('/:id/members/:memberId', async (req, res) => {
  *       200:
  *         description: Member removed successfully
  */
-router.delete('/:id/members/:memberId', async (req, res) => {
+router.delete('/:id/members/:memberId', authenticate, async (req, res) => {
   try {
+    // TODO: Add permission check - only owners/moderators should be able to remove members
+    // Users should be able to remove themselves (leave community)
+    
     const member = await CommunityMemberService.removeMember(req.params.memberId);
     if (!member) {
-      return res.status(404).json({ error: 'Member not found' });
+      const errorResponse = formatErrorResponse(
+        new AppError('Member not found', 404, 'RESOURCE_NOT_FOUND' as any)
+      );
+      return res.status(404).json(errorResponse);
     }
-    res.json({ message: 'Member removed successfully', member });
+    
+    res.json({
+      success: true,
+      data: member,
+      message: 'Member removed successfully'
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+    
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
   }
 });
 

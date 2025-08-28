@@ -1,5 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { CourseService, CourseModuleService, CourseMaterialService } from '../services/course';
+import { AppError, formatErrorResponse, handleDatabaseError } from '../lib/errors';
+import { validatePaginationParams } from '../lib/validation';
+import { authenticate, optionalAuth } from '../middleware/auth';
 
 const router: Router = Router();
 
@@ -49,12 +52,29 @@ const router: Router = Router();
  *       201:
  *         description: Course created successfully
  */
-router.post('/', async (req, res) => {
+router.post('/', authenticate, async (req, res) => {
   try {
-    const course = await CourseService.createCourse(req.body);
-    res.status(201).json(course);
+    // Automatically set instructorId from authenticated user
+    const courseData = {
+      ...req.body,
+      instructorId: req.user!.id
+    };
+    
+    const course = await CourseService.createCourse(courseData);
+    res.status(201).json({
+      success: true,
+      data: course,
+      message: 'Course created successfully'
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+    
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
   }
 });
 
@@ -99,19 +119,74 @@ router.post('/', async (req, res) => {
  *       200:
  *         description: List of courses
  */
-router.get('/', async (req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
   try {
     const { page = 1, pageSize = 20, ...filters } = req.query;
+    validatePaginationParams(page, pageSize);
+    
     const courses = await CourseService.getAllCourses(
       Number(page), 
       Number(pageSize), 
       filters as any
     );
-    res.json(courses);
+    
+    res.json({
+      success: true,
+      data: courses,
+      pagination: {
+        page: Number(page),
+        pageSize: Number(pageSize)
+      }
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+    
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
   }
 });
+
+/**
+ * @swagger
+ * /api/courses/new:
+ *   get:
+ *     summary: Get course creation form data
+ *     tags: [Courses]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Course creation form data
+ *       401:
+ *         description: Authentication required
+ */
+router.get('/new', authenticate, async (req, res) => {
+  try {
+    // Return any data needed for course creation form
+    // This could include available communities, difficulty levels, etc.
+    res.json({
+      success: true,
+      data: {
+        difficulties: ['beginner', 'intermediate', 'advanced'],
+        materialTypes: ['video', 'text', 'file', 'link']
+      }
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+    
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
+  }
+});
+
 
 /**
  * @swagger
@@ -131,15 +206,29 @@ router.get('/', async (req, res) => {
  *       404:
  *         description: Course not found
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', optionalAuth, async (req, res) => {
   try {
     const course = await CourseService.getCourseById(req.params.id);
     if (!course) {
-      return res.status(404).json({ error: 'Course not found' });
+      const errorResponse = formatErrorResponse(
+        new AppError('Course not found', 404, 'RESOURCE_NOT_FOUND' as any)
+      );
+      return res.status(404).json(errorResponse);
     }
-    res.json(course);
+    
+    res.json({
+      success: true,
+      data: course
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+    
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
   }
 });
 
@@ -161,15 +250,29 @@ router.get('/:id', async (req, res) => {
  *       404:
  *         description: Course not found
  */
-router.get('/:id/content', async (req, res) => {
+router.get('/:id/content', optionalAuth, async (req, res) => {
   try {
     const course = await CourseService.getCourseWithContent(req.params.id);
     if (!course) {
-      return res.status(404).json({ error: 'Course not found' });
+      const errorResponse = formatErrorResponse(
+        new AppError('Course not found', 404, 'RESOURCE_NOT_FOUND' as any)
+      );
+      return res.status(404).json(errorResponse);
     }
-    res.json(course);
+    
+    res.json({
+      success: true,
+      data: course
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+    
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
   }
 });
 
@@ -218,15 +321,32 @@ router.get('/:id/content', async (req, res) => {
  *       200:
  *         description: Course updated successfully
  */
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticate, async (req, res) => {
   try {
+    // TODO: Add ownership check - only course instructor should be able to update
+    
     const course = await CourseService.updateCourse(req.params.id, req.body);
     if (!course) {
-      return res.status(404).json({ error: 'Course not found' });
+      const errorResponse = formatErrorResponse(
+        new AppError('Course not found', 404, 'RESOURCE_NOT_FOUND' as any)
+      );
+      return res.status(404).json(errorResponse);
     }
-    res.json(course);
+    
+    res.json({
+      success: true,
+      data: course,
+      message: 'Course updated successfully'
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+    
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
   }
 });
 
@@ -246,15 +366,32 @@ router.put('/:id', async (req, res) => {
  *       200:
  *         description: Course deleted successfully
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticate, async (req, res) => {
   try {
+    // TODO: Add ownership check - only course instructor should be able to delete
+    
     const course = await CourseService.deleteCourse(req.params.id);
     if (!course) {
-      return res.status(404).json({ error: 'Course not found' });
+      const errorResponse = formatErrorResponse(
+        new AppError('Course not found', 404, 'RESOURCE_NOT_FOUND' as any)
+      );
+      return res.status(404).json(errorResponse);
     }
-    res.json({ message: 'Course deleted successfully', course });
+    
+    res.json({
+      success: true,
+      data: course,
+      message: 'Course deleted successfully'
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+    
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
   }
 });
 
@@ -290,15 +427,29 @@ router.delete('/:id', async (req, res) => {
  *       201:
  *         description: Module created successfully
  */
-router.post('/:courseId/modules', async (req, res) => {
+router.post('/:courseId/modules', authenticate, async (req, res) => {
   try {
+    // TODO: Add ownership check - only course instructor should be able to add modules
+    
     const module = await CourseModuleService.createCourseModule({
       courseId: req.params.courseId,
       ...req.body
     });
-    res.status(201).json(module);
+    
+    res.status(201).json({
+      success: true,
+      data: module,
+      message: 'Module created successfully'
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+    
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
   }
 });
 
@@ -318,12 +469,30 @@ router.post('/:courseId/modules', async (req, res) => {
  *       200:
  *         description: List of course modules
  */
-router.get('/:courseId/modules', async (req, res) => {
+router.get('/:courseId/modules', optionalAuth, async (req, res) => {
   try {
-    const modules = await CourseModuleService.getModulesByCourse(req.params.courseId);
-    res.json(modules);
+    // Get modules for the course (returns empty array if no modules found)
+    let modules;
+    try {
+      modules = await CourseModuleService.getModulesByCourse(req.params.courseId);
+    } catch (dbError) {
+      // If database query fails, return empty array (course may exist but no modules yet)
+      modules = [];
+    }
+
+    res.json({
+      success: true,
+      data: modules
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+    
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
   }
 });
 

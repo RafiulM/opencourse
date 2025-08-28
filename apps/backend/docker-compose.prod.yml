@@ -6,8 +6,10 @@ services:
       context: .
       target: production
     ports:
-      - "5000:5000"
+      - "${PORT:-5000}:${PORT:-5000}"
+    env_file:
+      - .env
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL} # Use environment variable for database connection
+      DATABASE_URL: ${DATABASE_URL}
     restart: unless-stopped
