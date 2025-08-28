@@ -13,7 +13,7 @@ EXPOSE 5000
 CMD ["pnpm", "dev"]
 
 FROM base as production
-RUN pnpm ci --only=production
+RUN pnpm install
 COPY . .
 RUN pnpm run build
 
