@@ -1,5 +1,5 @@
-import { db } from '@/db';
-import { userScores, achievements, userAchievements } from '@/db/schema/scoreboard';
+import { db } from '../db';
+import { userScores, achievements, userAchievements } from '../db/schema/scoreboard';
 import { eq, and, desc, asc, count, avg, sum, gte, lte } from 'drizzle-orm';
 
 export interface CreateUserScoreData {
@@ -60,7 +60,7 @@ export class UserScoreService {
       .from(userScores)
       .where(eq(userScores.id, id))
       .limit(1);
-    
+
     return userScore;
   }
 
@@ -73,7 +73,7 @@ export class UserScoreService {
         eq(userScores.communityId, communityId)
       ))
       .limit(1);
-    
+
     return userScore;
   }
 
@@ -86,7 +86,7 @@ export class UserScoreService {
         eq(userScores.courseId, courseId)
       ))
       .limit(1);
-    
+
     return userScore;
   }
 
@@ -107,7 +107,7 @@ export class UserScoreService {
       })
       .where(eq(userScores.id, id))
       .returning();
-    
+
     return userScore;
   }
 
@@ -119,13 +119,13 @@ export class UserScoreService {
     data: Omit<UpdateUserScoreData, 'lastActivityAt'>
   ) {
     let existing;
-    
+
     if (communityId) {
       existing = await this.getUserScoreByUserAndCommunity(userId, communityId);
     } else if (courseId) {
       existing = await this.getUserScoreByUserAndCourse(userId, courseId);
     }
-    
+
     if (existing) {
       return await this.updateUserScore(existing.id, {
         ...data,
@@ -146,7 +146,7 @@ export class UserScoreService {
     const [userScore] = await db.delete(userScores)
       .where(eq(userScores.id, id))
       .returning();
-    
+
     return userScore;
   }
 
@@ -157,9 +157,9 @@ export class UserScoreService {
     communityId?: string,
     courseId?: string
   ) {
-    const existing = communityId 
+    const existing = communityId
       ? await this.getUserScoreByUserAndCommunity(userId, communityId)
-      : courseId 
+      : courseId
         ? await this.getUserScoreByUserAndCourse(userId, courseId)
         : null;
 
@@ -180,7 +180,7 @@ export class UserScoreService {
 
   // Update Course Completion
   static async updateCourseCompletion(userId: string, communityId?: string) {
-    const existing = communityId 
+    const existing = communityId
       ? await this.getUserScoreByUserAndCommunity(userId, communityId)
       : null;
 
@@ -200,14 +200,14 @@ export class UserScoreService {
 
   // Update Quiz Pass
   static async updateQuizPass(
-    userId: string, 
-    score: number, 
+    userId: string,
+    score: number,
     communityId?: string,
     courseId?: string
   ) {
-    const existing = communityId 
+    const existing = communityId
       ? await this.getUserScoreByUserAndCommunity(userId, communityId)
-      : courseId 
+      : courseId
         ? await this.getUserScoreByUserAndCourse(userId, courseId)
         : null;
 
@@ -216,7 +216,7 @@ export class UserScoreService {
       const totalQuizzes = existing.quizzesPassed + 1;
       const currentAverage = existing.averageQuizScore || 0;
       const newAverage = (((parseFloat(currentAverage.toString()) || 0) * existing.quizzesPassed) + score) / totalQuizzes;
-      
+
       return await this.updateUserScore(existing.id, {
         quizzesPassed: existing.quizzesPassed + 1,
         averageQuizScore: newAverage.toFixed(2),
@@ -235,9 +235,9 @@ export class UserScoreService {
 
   // Update User Streak
   static async updateUserStreak(userId: string, communityId?: string, courseId?: string) {
-    const existing = communityId 
+    const existing = communityId
       ? await this.getUserScoreByUserAndCommunity(userId, communityId)
-      : courseId 
+      : courseId
         ? await this.getUserScoreByUserAndCourse(userId, courseId)
         : null;
 
@@ -245,9 +245,9 @@ export class UserScoreService {
       const lastActivity = existing.lastActivityAt;
       const today = new Date();
       const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-      
+
       let newStreak = existing.streak;
-      
+
       // Check if last activity was yesterday (continue streak) or today (maintain streak)
       if (lastActivity && lastActivity >= yesterday) {
         if (lastActivity.toDateString() === yesterday.toDateString()) {
@@ -257,7 +257,7 @@ export class UserScoreService {
       } else {
         newStreak = 1; // Reset streak
       }
-      
+
       return await this.updateUserScore(existing.id, {
         streak: newStreak,
         lastActivityAt: new Date(),
@@ -275,8 +275,14 @@ export class UserScoreService {
   // Get Community Leaderboard
   static async getCommunityLeaderboard(communityId: string, page = 1, pageSize = 50) {
     const offset = (page - 1) * pageSize;
-    
-    return await db.select({
+
+    // Get total count
+    const [{ count: totalCount }] = await db.select({ count: count() })
+      .from(userScores)
+      .where(eq(userScores.communityId, communityId));
+    const totalPages = Math.ceil(totalCount / pageSize);
+
+    const results = await db.select({
       id: userScores.id,
       userId: userScores.userId,
       totalPoints: userScores.totalPoints,
@@ -286,18 +292,30 @@ export class UserScoreService {
       streak: userScores.streak,
       lastActivityAt: userScores.lastActivityAt,
     })
-    .from(userScores)
-    .where(eq(userScores.communityId, communityId))
-    .orderBy(desc(userScores.totalPoints), desc(userScores.lastActivityAt))
-    .limit(pageSize)
-    .offset(offset);
+      .from(userScores)
+      .where(eq(userScores.communityId, communityId))
+      .orderBy(desc(userScores.totalPoints), desc(userScores.lastActivityAt))
+      .limit(pageSize)
+      .offset(offset);
+
+    return {
+      leaderboard: results,
+      totalCount,
+      totalPages
+    };
   }
 
   // Get Course Leaderboard
   static async getCourseLeaderboard(courseId: string, page = 1, pageSize = 50) {
     const offset = (page - 1) * pageSize;
-    
-    return await db.select({
+
+    // Get total count
+    const [{ count: totalCount }] = await db.select({ count: count() })
+      .from(userScores)
+      .where(eq(userScores.courseId, courseId));
+    const totalPages = Math.ceil(totalCount / pageSize);
+
+    const results = await db.select({
       id: userScores.id,
       userId: userScores.userId,
       totalPoints: userScores.totalPoints,
@@ -305,11 +323,17 @@ export class UserScoreService {
       averageQuizScore: userScores.averageQuizScore,
       lastActivityAt: userScores.lastActivityAt,
     })
-    .from(userScores)
-    .where(eq(userScores.courseId, courseId))
-    .orderBy(desc(userScores.totalPoints), desc(userScores.averageQuizScore))
-    .limit(pageSize)
-    .offset(offset);
+      .from(userScores)
+      .where(eq(userScores.courseId, courseId))
+      .orderBy(desc(userScores.totalPoints), desc(userScores.averageQuizScore))
+      .limit(pageSize)
+      .offset(offset);
+
+    return {
+      leaderboard: results,
+      totalCount,
+      totalPages
+    };
   }
 
   // Get User Rank in Community
@@ -337,8 +361,8 @@ export class UserScoreService {
       totalQuizzesPassed: sum(userScores.quizzesPassed),
       averageQuizScore: avg(userScores.averageQuizScore),
     })
-    .from(userScores)
-    .where(eq(userScores.communityId, communityId));
+      .from(userScores)
+      .where(eq(userScores.communityId, communityId));
 
     return stats || {
       totalUsers: 0,
@@ -368,19 +392,30 @@ export class AchievementService {
       .from(achievements)
       .where(eq(achievements.id, id))
       .limit(1);
-    
+
     return achievement;
   }
 
   // Get All Achievements
   static async getAllAchievements(page = 1, pageSize = 50) {
     const offset = (page - 1) * pageSize;
-    
-    return await db.select()
+
+    // Get total count
+    const [{ count: totalCount }] = await db.select({ count: count() })
+      .from(achievements);
+    const totalPages = Math.ceil(totalCount / pageSize);
+
+    const results = await db.select()
       .from(achievements)
       .orderBy(desc(achievements.points), asc(achievements.name))
       .limit(pageSize)
       .offset(offset);
+
+    return {
+      achievements: results,
+      totalCount,
+      totalPages
+    };
   }
 
   // Update Achievement
@@ -389,7 +424,7 @@ export class AchievementService {
       .set(data)
       .where(eq(achievements.id, id))
       .returning();
-    
+
     return achievement;
   }
 
@@ -398,7 +433,7 @@ export class AchievementService {
     const [achievement] = await db.delete(achievements)
       .where(eq(achievements.id, id))
       .returning();
-    
+
     return achievement;
   }
 
@@ -447,7 +482,7 @@ export class UserAchievementService {
       .from(userAchievements)
       .where(eq(userAchievements.id, id))
       .limit(1);
-    
+
     return userAchievement;
   }
 
@@ -462,10 +497,10 @@ export class UserAchievementService {
       icon: achievements.icon,
       points: achievements.points,
     })
-    .from(userAchievements)
-    .innerJoin(achievements, eq(userAchievements.achievementId, achievements.id))
-    .where(eq(userAchievements.userId, userId))
-    .orderBy(desc(userAchievements.earnedAt));
+      .from(userAchievements)
+      .innerJoin(achievements, eq(userAchievements.achievementId, achievements.id))
+      .where(eq(userAchievements.userId, userId))
+      .orderBy(desc(userAchievements.earnedAt));
   }
 
   // Check if User Has Achievement
@@ -477,7 +512,7 @@ export class UserAchievementService {
         eq(userAchievements.achievementId, achievementId)
       ))
       .limit(1);
-    
+
     return !!userAchievement;
   }
 
@@ -511,7 +546,7 @@ export class UserAchievementService {
     const [userAchievement] = await db.delete(userAchievements)
       .where(eq(userAchievements.id, id))
       .returning();
-    
+
     return userAchievement;
   }
 
@@ -520,8 +555,8 @@ export class UserAchievementService {
     const [stats] = await db.select({
       totalEarned: count(),
     })
-    .from(userAchievements)
-    .where(eq(userAchievements.achievementId, achievementId));
+      .from(userAchievements)
+      .where(eq(userAchievements.achievementId, achievementId));
 
     return {
       totalEarned: stats?.totalEarned || 0,
@@ -530,25 +565,25 @@ export class UserAchievementService {
 
   // Check and Award Eligible Achievements
   static async checkAndAwardAchievements(userId: string, communityId?: string, courseId?: string) {
-    const userStats = communityId 
+    const userStats = communityId
       ? await UserScoreService.getUserScoreByUserAndCommunity(userId, communityId)
-      : courseId 
+      : courseId
         ? await UserScoreService.getUserScoreByUserAndCourse(userId, courseId)
         : null;
 
     if (!userStats) return [];
 
-    const allAchievements = await AchievementService.getAllAchievements();
+    const result = await AchievementService.getAllAchievements();
     const newAchievements = [];
 
-    for (const achievement of allAchievements) {
+    for (const achievement of result.achievements) {
       const hasAchievement = await this.hasUserAchievement(userId, achievement.id);
       if (!hasAchievement) {
         const meetsCriteria = AchievementService.checkAchievementCriteria(
-          achievement.criteria as Record<string, any>, 
+          achievement.criteria as Record<string, any>,
           userStats
         );
-        
+
         if (meetsCriteria) {
           const userAchievement = await this.awardAchievement(userId, achievement.id);
           if (userAchievement) {

@@ -75,81 +75,49 @@ router.post('/users/:userId/points', async (req, res) => {
   }
 });
 
-/**
- * @swagger
- * /api/scoreboard/communities/{communityId}/leaderboard:
- *   get:
- *     summary: Get community leaderboard
- *     tags: [Leaderboards]
- *     parameters:
- *       - in: path
- *         name: communityId
- *         required: true
- *         schema:
- *           type: string
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *       - in: query
- *         name: pageSize
- *         schema:
- *           type: integer
- *           default: 50
- *     responses:
- *       200:
- *         description: Community leaderboard
- */
+/**\n * @swagger\n * /api/scoreboard/communities/{communityId}/leaderboard:\n *   get:\n *     summary: Get community leaderboard\n *     tags: [Leaderboards]\n *     parameters:\n *       - in: path\n *         name: communityId\n *         required: true\n *         schema:\n *           type: string\n *       - in: query\n *         name: page\n *         schema:\n *           type: integer\n *           default: 1\n *       - in: query\n *         name: pageSize\n *         schema:\n *           type: integer\n *           default: 50\n *     responses:\n *       200:\n *         description: Community leaderboard\n */
 router.get('/communities/:communityId/leaderboard', async (req, res) => {
   try {
     const { page = 1, pageSize = 50 } = req.query;
-    const leaderboard = await UserScoreService.getCommunityLeaderboard(
+    const result = await UserScoreService.getCommunityLeaderboard(
       req.params.communityId,
       Number(page),
       Number(pageSize)
     );
-    res.json(leaderboard);
+    res.json({
+      success: true,
+      data: result.leaderboard,
+      pagination: {
+        page: Number(page),
+        pageSize: Number(pageSize),
+        total: result.totalCount,
+        totalPages: result.totalPages
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
 });
 
-/**
- * @swagger
- * /api/scoreboard/courses/{courseId}/leaderboard:
- *   get:
- *     summary: Get course leaderboard
- *     tags: [Leaderboards]
- *     parameters:
- *       - in: path
- *         name: courseId
- *         required: true
- *         schema:
- *           type: string
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *       - in: query
- *         name: pageSize
- *         schema:
- *           type: integer
- *           default: 50
- *     responses:
- *       200:
- *         description: Course leaderboard
- */
+/**\n * @swagger\n * /api/scoreboard/courses/{courseId}/leaderboard:\n *   get:\n *     summary: Get course leaderboard\n *     tags: [Leaderboards]\n *     parameters:\n *       - in: path\n *         name: courseId\n *         required: true\n *         schema:\n *           type: string\n *       - in: query\n *         name: page\n *         schema:\n *           type: integer\n *           default: 1\n *       - in: query\n *         name: pageSize\n *         schema:\n *           type: integer\n *           default: 50\n *     responses:\n *       200:\n *         description: Course leaderboard\n */
 router.get('/courses/:courseId/leaderboard', async (req, res) => {
   try {
     const { page = 1, pageSize = 50 } = req.query;
-    const leaderboard = await UserScoreService.getCourseLeaderboard(
+    const result = await UserScoreService.getCourseLeaderboard(
       req.params.courseId,
       Number(page),
       Number(pageSize)
     );
-    res.json(leaderboard);
+    res.json({
+      success: true,
+      data: result.leaderboard,
+      pagination: {
+        page: Number(page),
+        pageSize: Number(pageSize),
+        total: result.totalCount,
+        totalPages: result.totalPages
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
@@ -244,11 +212,20 @@ router.post('/achievements', async (req, res) => {
 router.get('/achievements', async (req, res) => {
   try {
     const { page = 1, pageSize = 50 } = req.query;
-    const achievements = await AchievementService.getAllAchievements(
+    const result = await AchievementService.getAllAchievements(
       Number(page),
       Number(pageSize)
     );
-    res.json(achievements);
+    res.json({
+      success: true,
+      data: result.achievements,
+      pagination: {
+        page: Number(page),
+        pageSize: Number(pageSize),
+        total: result.totalCount,
+        totalPages: result.totalPages
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }

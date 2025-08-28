@@ -1,5 +1,5 @@
-import { db } from '@/db';
-import { quizzes, quizQuestions, quizAttempts, questionTypeEnum } from '@/db/schema/quiz';
+import { db } from '../db';
+import { quizzes, quizQuestions, quizAttempts, questionTypeEnum } from '../db/schema/quiz';
 import { eq, and, desc, asc, count, avg, max } from 'drizzle-orm';
 
 export interface CreateQuizData {

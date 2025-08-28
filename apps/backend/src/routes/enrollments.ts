@@ -70,93 +70,51 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-/**
- * @swagger
- * /api/enrollments/user/{userId}:
- *   get:
- *     summary: Get user enrollments
- *     tags: [Enrollments]
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *       - in: query
- *         name: pageSize
- *         schema:
- *           type: integer
- *           default: 20
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           enum: [enrolled, completed, dropped]
- *     responses:
- *       200:
- *         description: List of user enrollments
- */
+/**\n * @swagger\n * /api/enrollments/user/{userId}:\n *   get:\n *     summary: Get user enrollments\n *     tags: [Enrollments]\n *     parameters:\n *       - in: path\n *         name: userId\n *         required: true\n *         schema:\n *           type: string\n *       - in: query\n *         name: page\n *         schema:\n *           type: integer\n *           default: 1\n *       - in: query\n *         name: pageSize\n *         schema:\n *           type: integer\n *           default: 20\n *       - in: query\n *         name: status\n *         schema:\n *           type: string\n *           enum: [enrolled, completed, dropped]\n *     responses:\n *       200:\n *         description: List of user enrollments\n */
 router.get('/user/:userId', async (req, res) => {
   try {
     const { page = 1, pageSize = 20, status } = req.query;
-    const enrollments = await EnrollmentService.getUserEnrollments(
+    const result = await EnrollmentService.getUserEnrollments(
       req.params.userId,
       Number(page),
       Number(pageSize),
       status as any
     );
-    res.json(enrollments);
+    res.json({
+      success: true,
+      data: result.enrollments,
+      pagination: {
+        page: Number(page),
+        pageSize: Number(pageSize),
+        total: result.totalCount,
+        totalPages: result.totalPages
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
 });
 
-/**
- * @swagger
- * /api/enrollments/course/{courseId}:
- *   get:
- *     summary: Get course enrollments
- *     tags: [Enrollments]
- *     parameters:
- *       - in: path
- *         name: courseId
- *         required: true
- *         schema:
- *           type: string
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *       - in: query
- *         name: pageSize
- *         schema:
- *           type: integer
- *           default: 50
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           enum: [enrolled, completed, dropped]
- *     responses:
- *       200:
- *         description: List of course enrollments
- */
+/**\n * @swagger\n * /api/enrollments/course/{courseId}:\n *   get:\n *     summary: Get course enrollments\n *     tags: [Enrollments]\n *     parameters:\n *       - in: path\n *         name: courseId\n *         required: true\n *         schema:\n *           type: string\n *       - in: query\n *         name: page\n *         schema:\n *           type: integer\n *           default: 1\n *       - in: query\n *         name: pageSize\n *         schema:\n *           type: integer\n *           default: 50\n *       - in: query\n *         name: status\n *         schema:\n *           type: string\n *           enum: [enrolled, completed, dropped]\n *     responses:\n *       200:\n *         description: List of course enrollments\n */
 router.get('/course/:courseId', async (req, res) => {
   try {
     const { page = 1, pageSize = 50, status } = req.query;
-    const enrollments = await EnrollmentService.getCourseEnrollments(
+    const result = await EnrollmentService.getCourseEnrollments(
       req.params.courseId,
       Number(page),
       Number(pageSize),
       status as any
     );
-    res.json(enrollments);
+    res.json({
+      success: true,
+      data: result.enrollments,
+      pagination: {
+        page: Number(page),
+        pageSize: Number(pageSize),
+        total: result.totalCount,
+        totalPages: result.totalPages
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }

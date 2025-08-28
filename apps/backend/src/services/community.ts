@@ -1,5 +1,5 @@
-import { db } from '@/db';
-import { communities, communityMembers, communityRoleEnum, communityPrivacyEnum } from '@/db/schema/community';
+import { db } from '../db';
+import { communities, communityMembers, communityRoleEnum, communityPrivacyEnum } from '../db/schema/community';
 import { eq, and, desc, count } from 'drizzle-orm';
 
 export interface CreateCommunityData {
@@ -86,13 +86,29 @@ export class CommunityService {
       dynamicQuery.where(eq(communities.privacy, privacy));
     }
 
+    // Get total count
+    const countQuery = db.select({ count: count() }).from(communities);
+    const dynamicCountQuery = countQuery.$dynamic();
+
+    // Apply same filters to count query
+    if (privacy) {
+      dynamicCountQuery.where(eq(communities.privacy, privacy));
+    }
+
+    const [{ count: totalCount }] = await dynamicCountQuery;
+    const totalPages = Math.ceil(totalCount / pageSize);
+
     const offset = (page - 1) * pageSize;
     const results = await dynamicQuery
       .orderBy(desc(communities.createdAt))
       .limit(pageSize)
       .offset(offset);
 
-    return results;
+    return {
+      communities: results,
+      totalCount,
+      totalPages
+    };
   }
 
   // Update Community
@@ -158,9 +174,15 @@ export class CommunityMemberService {
 
   // Get Community Members
   static async getCommunityMembers(communityId: string, page = 1, pageSize = 50) {
+    // Get total count
+    const [{ count: totalCount }] = await db.select({ count: count() })
+      .from(communityMembers)
+      .where(eq(communityMembers.communityId, communityId));
+    const totalPages = Math.ceil(totalCount / pageSize);
+
     const offset = (page - 1) * pageSize;
 
-    return await db.select({
+    const results = await db.select({
       id: communityMembers.id,
       userId: communityMembers.userId,
       role: communityMembers.role,
@@ -171,6 +193,12 @@ export class CommunityMemberService {
       .orderBy(desc(communityMembers.joinedAt))
       .limit(pageSize)
       .offset(offset);
+
+    return {
+      members: results,
+      totalCount,
+      totalPages
+    };
   }
 
   // Get Member by User and Community

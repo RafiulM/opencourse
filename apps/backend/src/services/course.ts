@@ -1,5 +1,5 @@
-import { db } from '@/db';
-import { courses, courseModules, courseMaterials, materialTypeEnum } from '@/db/schema/course';
+import { db } from '../db';
+import { courses, courseModules, courseMaterials, materialTypeEnum } from '../db/schema/course';
 import { eq, and, desc, asc, count } from 'drizzle-orm';
 
 export interface CreateCourseData {
@@ -136,37 +136,89 @@ export class CourseService {
       dynamicQuery.where(eq(courses.difficulty, filters.difficulty));
     }
 
+    // Get total count
+    const countQuery = db.select({ count: count() }).from(courses);
+    const dynamicCountQuery = countQuery.$dynamic();
+
+    // Apply same filters to count query
+    if (filters?.communityId) {
+      dynamicCountQuery.where(eq(courses.communityId, filters.communityId));
+    }
+    if (filters?.instructorId) {
+      dynamicCountQuery.where(eq(courses.instructorId, filters.instructorId));
+    }
+    if (filters?.isPublished !== undefined) {
+      dynamicCountQuery.where(eq(courses.isPublished, filters.isPublished));
+    }
+    if (filters?.isFeatured !== undefined) {
+      dynamicCountQuery.where(eq(courses.isFeatured, filters.isFeatured));
+    }
+    if (filters?.difficulty) {
+      dynamicCountQuery.where(eq(courses.difficulty, filters.difficulty));
+    }
+
+    const [{ count: totalCount }] = await dynamicCountQuery;
+    const totalPages = Math.ceil(totalCount / pageSize);
+
     const offset = (page - 1) * pageSize;
-    const results = await query
+    const results = await dynamicQuery
       .orderBy(desc(courses.createdAt))
       .limit(pageSize)
       .offset(offset);
 
-    return results;
+    return {
+      courses: results,
+      totalCount,
+      totalPages
+    };
   }
 
   // Get Courses by Community
   static async getCoursesByCommunity(communityId: string, page = 1, pageSize = 20) {
+    // Get total count
+    const [{ count: totalCount }] = await db.select({ count: count() })
+      .from(courses)
+      .where(eq(courses.communityId, communityId));
+    const totalPages = Math.ceil(totalCount / pageSize);
+
     const offset = (page - 1) * pageSize;
 
-    return await db.select()
+    const results = await db.select()
       .from(courses)
       .where(eq(courses.communityId, communityId))
       .orderBy(desc(courses.createdAt))
       .limit(pageSize)
       .offset(offset);
+
+    return {
+      courses: results,
+      totalCount,
+      totalPages
+    };
   }
 
   // Get Courses by Instructor
   static async getCoursesByInstructor(instructorId: string, page = 1, pageSize = 20) {
+    // Get total count
+    const [{ count: totalCount }] = await db.select({ count: count() })
+      .from(courses)
+      .where(eq(courses.instructorId, instructorId));
+    const totalPages = Math.ceil(totalCount / pageSize);
+
     const offset = (page - 1) * pageSize;
 
-    return await db.select()
+    const results = await db.select()
       .from(courses)
       .where(eq(courses.instructorId, instructorId))
       .orderBy(desc(courses.createdAt))
       .limit(pageSize)
       .offset(offset);
+
+    return {
+      courses: results,
+      totalCount,
+      totalPages
+    };
   }
 
   // Update Course

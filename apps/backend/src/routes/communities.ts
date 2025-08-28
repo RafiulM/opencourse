@@ -114,7 +114,7 @@ router.get('/', optionalAuth, async (req, res) => {
     const { page = 1, pageSize = 20, privacy } = req.query;
     validatePaginationParams(page, pageSize);
     
-    const communities = await CommunityService.getAllCommunities(
+    const result = await CommunityService.getAllCommunities(
       Number(page), 
       Number(pageSize), 
       privacy as any
@@ -122,10 +122,12 @@ router.get('/', optionalAuth, async (req, res) => {
     
     res.json({
       success: true,
-      data: communities,
+      data: result.communities,
       pagination: {
         page: Number(page),
-        pageSize: Number(pageSize)
+        pageSize: Number(pageSize),
+        total: result.totalCount,
+        totalPages: result.totalPages
       }
     });
   } catch (error) {
@@ -510,7 +512,7 @@ router.get('/:id/members', optionalAuth, async (req, res) => {
     const { page = 1, pageSize = 50 } = req.query;
     validatePaginationParams(page, pageSize);
     
-    const members = await CommunityMemberService.getCommunityMembers(
+    const result = await CommunityMemberService.getCommunityMembers(
       req.params.id, 
       Number(page), 
       Number(pageSize)
@@ -518,10 +520,12 @@ router.get('/:id/members', optionalAuth, async (req, res) => {
     
     res.json({
       success: true,
-      data: members,
+      data: result.members,
       pagination: {
         page: Number(page),
-        pageSize: Number(pageSize)
+        pageSize: Number(pageSize),
+        total: result.totalCount,
+        totalPages: result.totalPages
       }
     });
   } catch (error) {

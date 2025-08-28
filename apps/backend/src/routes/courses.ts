@@ -124,7 +124,7 @@ router.get('/', optionalAuth, async (req, res) => {
     const { page = 1, pageSize = 20, ...filters } = req.query;
     validatePaginationParams(page, pageSize);
     
-    const courses = await CourseService.getAllCourses(
+    const result = await CourseService.getAllCourses(
       Number(page), 
       Number(pageSize), 
       filters as any
@@ -132,10 +132,12 @@ router.get('/', optionalAuth, async (req, res) => {
     
     res.json({
       success: true,
-      data: courses,
+      data: result.courses,
       pagination: {
         page: Number(page),
-        pageSize: Number(pageSize)
+        pageSize: Number(pageSize),
+        total: result.totalCount,
+        totalPages: result.totalPages
       }
     });
   } catch (error) {

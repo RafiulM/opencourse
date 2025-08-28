@@ -1,6 +1,6 @@
-import { db } from '@/db';
-import { enrollments, materialProgress, enrollmentStatusEnum } from '@/db/schema/enrollment';
-import { courses } from '@/db/schema/course';
+import { db } from '../db';
+import { enrollments, materialProgress, enrollmentStatusEnum } from '../db/schema/enrollment';
+import { courses } from '../db/schema/course';
 import { eq, and, desc, count, avg } from 'drizzle-orm';
 
 export interface CreateEnrollmentData {
@@ -103,13 +103,32 @@ export class EnrollmentService {
       dynamicQuery.where(eq(enrollments.status, status));
     }
 
+    // Get total count
+    const countQuery = db.select({ count: count() })
+      .from(enrollments)
+      .innerJoin(courses, eq(enrollments.courseId, courses.id))
+      .where(eq(enrollments.userId, userId));
+    const dynamicCountQuery = countQuery.$dynamic();
+
+    // Apply same filters to count query
+    if (status) {
+      dynamicCountQuery.where(eq(enrollments.status, status));
+    }
+
+    const [{ count: totalCount }] = await dynamicCountQuery;
+    const totalPages = Math.ceil(totalCount / pageSize);
+
     const offset = (page - 1) * pageSize;
     const results = await dynamicQuery
       .orderBy(desc(enrollments.enrolledAt))
       .limit(pageSize)
       .offset(offset);
 
-    return results;
+    return {
+      enrollments: results,
+      totalCount,
+      totalPages
+    };
   }
 
   // Get Course Enrollments
@@ -129,13 +148,31 @@ export class EnrollmentService {
       dynamicQuery.where(eq(enrollments.status, status));
     }
 
+    // Get total count
+    const countQuery = db.select({ count: count() })
+      .from(enrollments)
+      .where(eq(enrollments.courseId, courseId));
+    const dynamicCountQuery = countQuery.$dynamic();
+
+    // Apply same filters to count query
+    if (status) {
+      dynamicCountQuery.where(eq(enrollments.status, status));
+    }
+
+    const [{ count: totalCount }] = await dynamicCountQuery;
+    const totalPages = Math.ceil(totalCount / pageSize);
+
     const offset = (page - 1) * pageSize;
-    const results = await query
+    const results = await dynamicQuery
       .orderBy(desc(enrollments.enrolledAt))
       .limit(pageSize)
       .offset(offset);
 
-    return results;
+    return {
+      enrollments: results,
+      totalCount,
+      totalPages
+    };
   }
 
   // Update Enrollment
