@@ -8,7 +8,6 @@ import { auth } from "./lib/auth";
 import swaggerUi from 'swagger-ui-express';
 import swaggerJSDoc from 'swagger-jsdoc';
 import basicAuth from 'express-basic-auth';
-import 'module-alias/register';
 
 // Import routes
 import apiRouter from './routes/index';
