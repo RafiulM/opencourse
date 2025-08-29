@@ -8,10 +8,15 @@ import {
 import { queryKeys } from './query-keys';
 
 // Quizzes Hooks
-export function useQuizzes(page = 1, limit = 20, courseId?: string) {
+export function useQuizzes(
+  page = 1, 
+  limit = 20, 
+  filters: Record<string, any> = {},
+  sort: string[] = []
+) {
   return useQuery({
-    queryKey: queryKeys.quizzes.list({ page, limit, courseId }),
-    queryFn: () => apiClient.getQuizzes(page, limit, courseId),
+    queryKey: queryKeys.quizzes.list({ page, limit, filters, sort }),
+    queryFn: () => apiClient.getQuizzes(page, limit, filters, sort),
   });
 }
 

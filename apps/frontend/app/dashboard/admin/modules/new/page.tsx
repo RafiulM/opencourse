@@ -1,43 +1,43 @@
 'use client';
 
-import { useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { ArrowLeft, Save } from "lucide-react"
-import Link from "next/link"
-import { useCreateCourseModule } from "@/hooks/use-modules"
-import { useCourses } from "@/hooks/use-courses"
-import { CreateCourseModuleRequest } from "@/lib/types"
-import { toast } from "sonner"
+} from "@/components/ui/select";
+import { ArrowLeft, Save } from "lucide-react";
+import Link from "next/link";
+import { useCreateCourseModule } from "@/hooks/use-modules";
+import { useCourses } from "@/hooks/use-courses";
+import { CreateCourseModuleRequest } from "@/lib/types";
+import { toast } from "sonner";
 
 const createModuleSchema = z.object({
   courseId: z.string().min(1, "Course is required"),
   title: z.string().min(1, "Title is required").max(200, "Title too long"),
   description: z.string().max(1000, "Description too long").optional(),
   order: z.number().min(1, "Order must be at least 1"),
-})
+});
 
-type CreateModuleForm = z.infer<typeof createModuleSchema>
+type CreateModuleForm = z.infer<typeof createModuleSchema>;
 
 export default function NewModulePage() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const createModuleMutation = useCreateCourseModule()
-  const { data: coursesData } = useCourses(1, 100)
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const createModuleMutation = useCreateCourseModule();
+  const { data: coursesData } = useCourses(1, 100);
 
   const {
     register,
@@ -53,9 +53,9 @@ export default function NewModulePage() {
       description: '',
       order: 1,
     },
-  })
+  });
 
-  const courseId = watch("courseId")
+  const courseId = watch("courseId");
 
   const onSubmit = async (data: CreateModuleForm) => {
     try {
@@ -64,20 +64,20 @@ export default function NewModulePage() {
         title: data.title,
         description: data.description || undefined,
         order: data.order,
-      }
+      };
 
-      const result = await createModuleMutation.mutateAsync(moduleData)
-      toast.success("Module created successfully!")
+      const result = await createModuleMutation.mutateAsync(moduleData);
+      toast.success("Module created successfully!");
       
       // Navigate back to the course detail page
-      router.push(`/dashboard/admin/courses/${data.courseId}`)
+      router.push(`/dashboard/admin/courses/${data.courseId}`);
     } catch (error) {
-      toast.error("Failed to create module")
-      console.error(error)
+      toast.error("Failed to create module");
+      console.error(error);
     }
-  }
+  };
 
-  const selectedCourse = coursesData?.data?.find(course => course.id === courseId)
+  const selectedCourse = coursesData?.data?.find(course => course.id === courseId);
 
   return (
     <div className="space-y-6">
@@ -221,5 +221,5 @@ export default function NewModulePage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

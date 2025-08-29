@@ -2,7 +2,6 @@
 
 import { use } from "react"
 import { notFound } from "next/navigation"
-import { parseAsBoolean, useQueryState } from "nuqs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -45,7 +44,6 @@ import { useCommunity } from "@/hooks/use-communities"
 import { Course } from "@/lib/types"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
-import { EditCourseSheet } from "@/components/edit-course-sheet"
 
 interface CourseDetailPageProps {
   params: Promise<{
@@ -56,7 +54,6 @@ interface CourseDetailPageProps {
 export default function CourseDetailPage({ params }: CourseDetailPageProps) {
   const { id } = use(params)
   const router = useRouter()
-  const [editOpen, setEditOpen] = useQueryState('edit', parseAsBoolean.withDefault(false))
   const { data: courseResponse, isLoading, error } = useCourse(id)
   const { data: modulesResponse } = useCourseModules(id)
   const { data: communityResponse } = useCommunity(courseResponse?.data?.communityId || '', !!courseResponse?.data?.communityId)
@@ -134,13 +131,12 @@ export default function CourseDetailPage({ params }: CourseDetailPageProps) {
           </Link>
         </div>
         <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            onClick={() => setEditOpen(true)}
-          >
-            <Edit className="mr-2 h-4 w-4" />
-            Edit
-          </Button>
+          <Link href={`/dashboard/admin/courses/${course.id}/edit`}>
+            <Button variant="outline">
+              <Edit className="mr-2 h-4 w-4" />
+              Edit
+            </Button>
+          </Link>
           <Button
             variant="destructive"
             onClick={handleDelete}
@@ -401,12 +397,6 @@ export default function CourseDetailPage({ params }: CourseDetailPageProps) {
         </CardContent>
       </Card>
 
-      {/* Edit Course Sheet */}
-      <EditCourseSheet
-        course={course}
-        open={editOpen}
-        onOpenChange={setEditOpen}
-      />
     </div>
   )
 }

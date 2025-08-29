@@ -5,3 +5,4 @@ export * from './course';
 export * from './enrollment';
 export * from './quiz';
 export * from './scoreboard';
+export * from './uploads';

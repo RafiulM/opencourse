@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { courses, courseModules, courseMaterials, materialTypeEnum } from '../db/schema/course';
-import { eq, and, desc, asc, count } from 'drizzle-orm';
+import { eq, and, desc, asc, count, ilike, gte, lte, or } from 'drizzle-orm';
 
 export interface CreateCourseData {
   communityId: string;
@@ -70,13 +70,34 @@ export interface UpdateCourseMaterialData {
   isPreview?: boolean;
 }
 
+export interface CourseQueryOptions {
+  page?: number;
+  pageSize?: number;
+  filters?: {
+    communityId?: string;
+    instructorId?: string;
+    isPublished?: boolean;
+    isFeatured?: boolean;
+    difficulty?: string;
+    price?: { min?: number; max?: number };
+    duration?: { min?: number; max?: number };
+    enrollmentCount?: { min?: number; max?: number };
+    createdAt?: { start?: Date; end?: Date };
+    updatedAt?: { start?: Date; end?: Date };
+  };
+  search?: string;
+  sort?: Array<{ field: string; order: 'asc' | 'desc' }>;
+}
+
 // Course CRUD Operations
 export class CourseService {
   // Create Course
   static async createCourse(data: CreateCourseData) {
-    const [course] = await db.insert(courses)
+    const coursesResult = await db.insert(courses)
       .values(data)
       .returning();
+
+    const course = coursesResult[0];
 
     return course;
   }
@@ -104,36 +125,89 @@ export class CourseService {
     return course;
   }
 
-  // Get All Courses (with pagination and filters)
-  static async getAllCourses(
-    page = 1,
-    pageSize = 20,
-    filters?: {
-      communityId?: string;
-      instructorId?: string;
-      isPublished?: boolean;
-      isFeatured?: boolean;
-      difficulty?: string;
-    }
-  ) {
-    const query = db.select().from(courses);
+  // Get All Courses (with advanced filtering, sorting, and search)
+  static async getAllCourses(options: CourseQueryOptions = {}) {
+    const {
+      page = 1,
+      pageSize = 20,
+      filters = {},
+      search,
+      sort = [{ field: 'createdAt', order: 'desc' }]
+    } = options;
 
+    const query = db.select().from(courses);
     const dynamicQuery = query.$dynamic();
 
-    if (filters?.communityId) {
+    // Apply filters
+    if (filters.communityId) {
       dynamicQuery.where(eq(courses.communityId, filters.communityId));
     }
-    if (filters?.instructorId) {
+    if (filters.instructorId) {
       dynamicQuery.where(eq(courses.instructorId, filters.instructorId));
     }
-    if (filters?.isPublished !== undefined) {
+    if (filters.isPublished !== undefined) {
       dynamicQuery.where(eq(courses.isPublished, filters.isPublished));
     }
-    if (filters?.isFeatured !== undefined) {
+    if (filters.isFeatured !== undefined) {
       dynamicQuery.where(eq(courses.isFeatured, filters.isFeatured));
     }
-    if (filters?.difficulty) {
+    if (filters.difficulty) {
       dynamicQuery.where(eq(courses.difficulty, filters.difficulty));
+    }
+
+    if (filters.price) {
+      if (filters.price.min !== undefined) {
+        dynamicQuery.where(gte(courses.price, filters.price.min.toString()));
+      }
+      if (filters.price.max !== undefined) {
+        dynamicQuery.where(lte(courses.price, filters.price.max.toString()));
+      }
+    }
+
+    if (filters.duration) {
+      if (filters.duration.min !== undefined) {
+        dynamicQuery.where(gte(courses.duration, filters.duration.min));
+      }
+      if (filters.duration.max !== undefined) {
+        dynamicQuery.where(lte(courses.duration, filters.duration.max));
+      }
+    }
+
+    if (filters.enrollmentCount) {
+      if (filters.enrollmentCount.min !== undefined) {
+        dynamicQuery.where(gte(courses.enrollmentCount, filters.enrollmentCount.min));
+      }
+      if (filters.enrollmentCount.max !== undefined) {
+        dynamicQuery.where(lte(courses.enrollmentCount, filters.enrollmentCount.max));
+      }
+    }
+
+    if (filters.createdAt) {
+      if (filters.createdAt.start) {
+        dynamicQuery.where(gte(courses.createdAt, filters.createdAt.start));
+      }
+      if (filters.createdAt.end) {
+        dynamicQuery.where(lte(courses.createdAt, filters.createdAt.end));
+      }
+    }
+
+    if (filters.updatedAt) {
+      if (filters.updatedAt.start) {
+        dynamicQuery.where(gte(courses.updatedAt, filters.updatedAt.start));
+      }
+      if (filters.updatedAt.end) {
+        dynamicQuery.where(lte(courses.updatedAt, filters.updatedAt.end));
+      }
+    }
+
+    // Apply search
+    if (search) {
+      dynamicQuery.where(
+        or(
+          ilike(courses.title, `%${search}%`),
+          ilike(courses.description, `%${search}%`)
+        )
+      );
     }
 
     // Get total count
@@ -141,28 +215,117 @@ export class CourseService {
     const dynamicCountQuery = countQuery.$dynamic();
 
     // Apply same filters to count query
-    if (filters?.communityId) {
+    if (filters.communityId) {
       dynamicCountQuery.where(eq(courses.communityId, filters.communityId));
     }
-    if (filters?.instructorId) {
+    if (filters.instructorId) {
       dynamicCountQuery.where(eq(courses.instructorId, filters.instructorId));
     }
-    if (filters?.isPublished !== undefined) {
+    if (filters.isPublished !== undefined) {
       dynamicCountQuery.where(eq(courses.isPublished, filters.isPublished));
     }
-    if (filters?.isFeatured !== undefined) {
+    if (filters.isFeatured !== undefined) {
       dynamicCountQuery.where(eq(courses.isFeatured, filters.isFeatured));
     }
-    if (filters?.difficulty) {
+    if (filters.difficulty) {
       dynamicCountQuery.where(eq(courses.difficulty, filters.difficulty));
+    }
+
+    if (filters.price) {
+      if (filters.price.min !== undefined) {
+        dynamicCountQuery.where(gte(courses.price, filters.price.min.toString()));
+      }
+      if (filters.price.max !== undefined) {
+        dynamicCountQuery.where(lte(courses.price, filters.price.max.toString()));
+      }
+    }
+
+    if (filters.duration) {
+      if (filters.duration.min !== undefined) {
+        dynamicCountQuery.where(gte(courses.duration, filters.duration.min));
+      }
+      if (filters.duration.max !== undefined) {
+        dynamicCountQuery.where(lte(courses.duration, filters.duration.max));
+      }
+    }
+
+    if (filters.enrollmentCount) {
+      if (filters.enrollmentCount.min !== undefined) {
+        dynamicCountQuery.where(gte(courses.enrollmentCount, filters.enrollmentCount.min));
+      }
+      if (filters.enrollmentCount.max !== undefined) {
+        dynamicCountQuery.where(lte(courses.enrollmentCount, filters.enrollmentCount.max));
+      }
+    }
+
+    if (filters.createdAt) {
+      if (filters.createdAt.start) {
+        dynamicCountQuery.where(gte(courses.createdAt, filters.createdAt.start));
+      }
+      if (filters.createdAt.end) {
+        dynamicCountQuery.where(lte(courses.createdAt, filters.createdAt.end));
+      }
+    }
+
+    if (filters.updatedAt) {
+      if (filters.updatedAt.start) {
+        dynamicCountQuery.where(gte(courses.updatedAt, filters.updatedAt.start));
+      }
+      if (filters.updatedAt.end) {
+        dynamicCountQuery.where(lte(courses.updatedAt, filters.updatedAt.end));
+      }
+    }
+
+    // Apply same search to count query
+    if (search) {
+      dynamicCountQuery.where(
+        or(
+          ilike(courses.title, `%${search}%`),
+          ilike(courses.description, `%${search}%`)
+        )
+      );
     }
 
     const [{ count: totalCount }] = await dynamicCountQuery;
     const totalPages = Math.ceil(totalCount / pageSize);
 
     const offset = (page - 1) * pageSize;
-    const results = await dynamicQuery
-      .orderBy(desc(courses.createdAt))
+
+    // Apply sorting
+    let orderedQuery = dynamicQuery;
+    for (const sortItem of sort) {
+      switch (sortItem.field) {
+        case 'title':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(courses.title) : desc(courses.title));
+          break;
+        case 'price':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(courses.price) : desc(courses.price));
+          break;
+        case 'duration':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(courses.duration) : desc(courses.duration));
+          break;
+        case 'difficulty':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(courses.difficulty) : desc(courses.difficulty));
+          break;
+        case 'enrollmentCount':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(courses.enrollmentCount) : desc(courses.enrollmentCount));
+          break;
+        case 'createdAt':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(courses.createdAt) : desc(courses.createdAt));
+          break;
+        case 'updatedAt':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(courses.updatedAt) : desc(courses.updatedAt));
+          break;
+        case 'isPublished':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(courses.isPublished) : desc(courses.isPublished));
+          break;
+        case 'isFeatured':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(courses.isFeatured) : desc(courses.isFeatured));
+          break;
+      }
+    }
+
+    const results = await orderedQuery
       .limit(pageSize)
       .offset(offset);
 
@@ -236,11 +399,11 @@ export class CourseService {
 
   // Delete Course
   static async deleteCourse(id: string) {
-    const [course] = await db.delete(courses)
+    const coursesResult = await db.delete(courses)
       .where(eq(courses.id, id))
       .returning();
 
-    return course;
+    return coursesResult[0];
   }
 
   // Update Enrollment Count
@@ -288,9 +451,11 @@ export class CourseService {
 export class CourseModuleService {
   // Create Course Module
   static async createCourseModule(data: CreateCourseModuleData) {
-    const [module] = await db.insert(courseModules)
+    const courseModulesResult = await db.insert(courseModules)
       .values(data)
       .returning();
+
+    const module = courseModulesResult[0];
 
     return module;
   }
@@ -328,11 +493,11 @@ export class CourseModuleService {
 
   // Delete Course Module
   static async deleteCourseModule(id: string) {
-    const [module] = await db.delete(courseModules)
+    const courseModulesResult = await db.delete(courseModules)
       .where(eq(courseModules.id, id))
       .returning();
 
-    return module;
+    return courseModulesResult[0];
   }
 
   // Reorder Modules
@@ -362,9 +527,11 @@ export class CourseModuleService {
 export class CourseMaterialService {
   // Create Course Material
   static async createCourseMaterial(data: CreateCourseMaterialData) {
-    const [material] = await db.insert(courseMaterials)
+    const courseMaterialsResult = await db.insert(courseMaterials)
       .values(data)
       .returning();
+
+    const material = courseMaterialsResult[0];
 
     return material;
   }
@@ -413,11 +580,11 @@ export class CourseMaterialService {
 
   // Delete Course Material
   static async deleteCourseMaterial(id: string) {
-    const [material] = await db.delete(courseMaterials)
+    const courseMaterialsResult = await db.delete(courseMaterials)
       .where(eq(courseMaterials.id, id))
       .returning();
 
-    return material;
+    return courseMaterialsResult[0];
   }
 
   // Reorder Materials

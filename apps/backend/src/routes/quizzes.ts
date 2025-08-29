@@ -47,9 +47,16 @@ const router: Router = Router();
 router.post('/', async (req, res) => {
   try {
     const quiz = await QuizService.createQuiz(req.body);
-    res.status(201).json(quiz);
+    res.status(201).json({
+      success: true,
+      data: quiz,
+      message: 'Quiz created successfully'
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -75,11 +82,20 @@ router.get('/:id', async (req, res) => {
   try {
     const quiz = await QuizService.getQuizById(req.params.id);
     if (!quiz) {
-      return res.status(404).json({ error: 'Quiz not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Quiz not found' 
+      });
     }
-    res.json(quiz);
+    res.json({
+      success: true,
+      data: quiz
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -111,11 +127,20 @@ router.get('/:id/questions', async (req, res) => {
     const includeAnswers = req.query.includeAnswers === 'true';
     const quiz = await QuizService.getQuizWithQuestions(req.params.id, includeAnswers);
     if (!quiz) {
-      return res.status(404).json({ error: 'Quiz not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Quiz not found' 
+      });
     }
-    res.json(quiz);
+    res.json({
+      success: true,
+      data: quiz
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -144,9 +169,15 @@ router.get('/course/:courseId', async (req, res) => {
   try {
     const includeUnpublished = req.query.includeUnpublished === 'true';
     const quizzes = await QuizService.getQuizzesByCourse(req.params.courseId, includeUnpublished);
-    res.json(quizzes);
+    res.json({
+      success: true,
+      data: quizzes
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -191,11 +222,21 @@ router.put('/:id', async (req, res) => {
   try {
     const quiz = await QuizService.updateQuiz(req.params.id, req.body);
     if (!quiz) {
-      return res.status(404).json({ error: 'Quiz not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Quiz not found' 
+      });
     }
-    res.json(quiz);
+    res.json({
+      success: true,
+      data: quiz,
+      message: 'Quiz updated successfully'
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -219,11 +260,21 @@ router.delete('/:id', async (req, res) => {
   try {
     const quiz = await QuizService.deleteQuiz(req.params.id);
     if (!quiz) {
-      return res.status(404).json({ error: 'Quiz not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Quiz not found' 
+      });
     }
-    res.json({ message: 'Quiz deleted successfully', quiz });
+    res.json({ 
+      success: true,
+      data: quiz,
+      message: 'Quiz deleted successfully' 
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -275,9 +326,16 @@ router.post('/:quizId/questions', async (req, res) => {
       quizId: req.params.quizId,
       ...req.body
     });
-    res.status(201).json(question);
+    res.status(201).json({
+      success: true,
+      data: question,
+      message: 'Question created successfully'
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -323,11 +381,21 @@ router.put('/questions/:questionId', async (req, res) => {
   try {
     const question = await QuizQuestionService.updateQuizQuestion(req.params.questionId, req.body);
     if (!question) {
-      return res.status(404).json({ error: 'Question not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Question not found' 
+      });
     }
-    res.json(question);
+    res.json({
+      success: true,
+      data: question,
+      message: 'Question updated successfully'
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -351,11 +419,21 @@ router.delete('/questions/:questionId', async (req, res) => {
   try {
     const question = await QuizQuestionService.deleteQuizQuestion(req.params.questionId);
     if (!question) {
-      return res.status(404).json({ error: 'Question not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Question not found' 
+      });
     }
-    res.json({ message: 'Question deleted successfully', question });
+    res.json({ 
+      success: true,
+      data: question,
+      message: 'Question deleted successfully' 
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -408,9 +486,16 @@ router.post('/:quizId/attempts', async (req, res) => {
       answers,
       new Date(startedAt)
     );
-    res.status(201).json(result);
+    res.status(201).json({
+      success: true,
+      data: result,
+      message: 'Quiz attempt submitted successfully'
+    });
   } catch (error) {
-    res.status(400).json({ error: (error as Error).message });
+    res.status(400).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -438,9 +523,15 @@ router.post('/:quizId/attempts', async (req, res) => {
 router.get('/:quizId/attempts/user/:userId', async (req, res) => {
   try {
     const stats = await QuizAttemptService.getUserQuizStats(req.params.userId, req.params.quizId);
-    res.json(stats);
+    res.json({
+      success: true,
+      data: stats
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -463,9 +554,15 @@ router.get('/:quizId/attempts/user/:userId', async (req, res) => {
 router.get('/:quizId/stats', async (req, res) => {
   try {
     const stats = await QuizService.getQuizStats(req.params.quizId);
-    res.json(stats);
+    res.json({
+      success: true,
+      data: stats
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 

@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { communities, communityMembers, communityRoleEnum, communityPrivacyEnum } from '../db/schema/community';
-import { eq, and, desc, count } from 'drizzle-orm';
+import { eq, and, desc, asc, count, ilike, gte, lte, or } from 'drizzle-orm';
 
 export interface CreateCommunityData {
   name: string;
@@ -35,16 +35,33 @@ export interface UpdateCommunityMemberData {
   role?: 'owner' | 'moderator' | 'member';
 }
 
+export interface CommunityQueryOptions {
+  page?: number;
+  pageSize?: number;
+  filters?: {
+    privacy?: 'public' | 'private' | 'invite_only';
+    createdBy?: string;
+    isVerified?: boolean;
+    memberCount?: { min?: number; max?: number };
+    createdAt?: { start?: Date; end?: Date };
+    updatedAt?: { start?: Date; end?: Date };
+  };
+  search?: string;
+  sort?: Array<{ field: string; order: 'asc' | 'desc' }>;
+}
+
 // Community CRUD Operations
 export class CommunityService {
   // Create Community
   static async createCommunity(data: CreateCommunityData) {
-    const [community] = await db.insert(communities)
+    const communitiesResult = await db.insert(communities)
       .values({
         ...data,
         memberCount: 1, // Creator is first member
       })
       .returning();
+
+    const community = communitiesResult[0];
 
     // Add creator as owner
     await db.insert(communityMembers).values({
@@ -76,14 +93,67 @@ export class CommunityService {
     return community;
   }
 
-  // Get All Communities (with pagination)
-  static async getAllCommunities(page = 1, pageSize = 20, privacy?: 'public' | 'private' | 'invite_only') {
-    const query = db.select().from(communities);
+  // Get All Communities (with advanced filtering, sorting, and search)
+  static async getAllCommunities(options: CommunityQueryOptions = {}) {
+    const {
+      page = 1,
+      pageSize = 20,
+      filters = {},
+      search,
+      sort = [{ field: 'createdAt', order: 'desc' }]
+    } = options;
 
+    const query = db.select().from(communities);
     const dynamicQuery = query.$dynamic();
 
-    if (privacy) {
-      dynamicQuery.where(eq(communities.privacy, privacy));
+    // Apply filters
+    if (filters.privacy) {
+      dynamicQuery.where(eq(communities.privacy, filters.privacy));
+    }
+
+    if (filters.createdBy) {
+      dynamicQuery.where(eq(communities.createdBy, filters.createdBy));
+    }
+
+    if (filters.isVerified !== undefined) {
+      dynamicQuery.where(eq(communities.isVerified, filters.isVerified));
+    }
+
+    if (filters.memberCount) {
+      if (filters.memberCount.min !== undefined) {
+        dynamicQuery.where(gte(communities.memberCount, filters.memberCount.min));
+      }
+      if (filters.memberCount.max !== undefined) {
+        dynamicQuery.where(lte(communities.memberCount, filters.memberCount.max));
+      }
+    }
+
+    if (filters.createdAt) {
+      if (filters.createdAt.start) {
+        dynamicQuery.where(gte(communities.createdAt, filters.createdAt.start));
+      }
+      if (filters.createdAt.end) {
+        dynamicQuery.where(lte(communities.createdAt, filters.createdAt.end));
+      }
+    }
+
+    if (filters.updatedAt) {
+      if (filters.updatedAt.start) {
+        dynamicQuery.where(gte(communities.updatedAt, filters.updatedAt.start));
+      }
+      if (filters.updatedAt.end) {
+        dynamicQuery.where(lte(communities.updatedAt, filters.updatedAt.end));
+      }
+    }
+
+    // Apply search
+    if (search) {
+      dynamicQuery.where(
+        or(
+          ilike(communities.name, `%${search}%`),
+          ilike(communities.description, `%${search}%`)
+        )
+      );
     }
 
     // Get total count
@@ -91,16 +161,86 @@ export class CommunityService {
     const dynamicCountQuery = countQuery.$dynamic();
 
     // Apply same filters to count query
-    if (privacy) {
-      dynamicCountQuery.where(eq(communities.privacy, privacy));
+    if (filters.privacy) {
+      dynamicCountQuery.where(eq(communities.privacy, filters.privacy));
+    }
+
+    if (filters.createdBy) {
+      dynamicCountQuery.where(eq(communities.createdBy, filters.createdBy));
+    }
+
+    if (filters.isVerified !== undefined) {
+      dynamicCountQuery.where(eq(communities.isVerified, filters.isVerified));
+    }
+
+    if (filters.memberCount) {
+      if (filters.memberCount.min !== undefined) {
+        dynamicCountQuery.where(gte(communities.memberCount, filters.memberCount.min));
+      }
+      if (filters.memberCount.max !== undefined) {
+        dynamicCountQuery.where(lte(communities.memberCount, filters.memberCount.max));
+      }
+    }
+
+    if (filters.createdAt) {
+      if (filters.createdAt.start) {
+        dynamicCountQuery.where(gte(communities.createdAt, filters.createdAt.start));
+      }
+      if (filters.createdAt.end) {
+        dynamicCountQuery.where(lte(communities.createdAt, filters.createdAt.end));
+      }
+    }
+
+    if (filters.updatedAt) {
+      if (filters.updatedAt.start) {
+        dynamicCountQuery.where(gte(communities.updatedAt, filters.updatedAt.start));
+      }
+      if (filters.updatedAt.end) {
+        dynamicCountQuery.where(lte(communities.updatedAt, filters.updatedAt.end));
+      }
+    }
+
+    // Apply same search to count query
+    if (search) {
+      dynamicCountQuery.where(
+        or(
+          ilike(communities.name, `%${search}%`),
+          ilike(communities.description, `%${search}%`)
+        )
+      );
     }
 
     const [{ count: totalCount }] = await dynamicCountQuery;
     const totalPages = Math.ceil(totalCount / pageSize);
 
     const offset = (page - 1) * pageSize;
-    const results = await dynamicQuery
-      .orderBy(desc(communities.createdAt))
+
+    // Apply sorting
+    let orderedQuery = dynamicQuery;
+    for (const sortItem of sort) {
+      switch (sortItem.field) {
+        case 'name':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(communities.name) : desc(communities.name));
+          break;
+        case 'slug':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(communities.slug) : desc(communities.slug));
+          break;
+        case 'memberCount':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(communities.memberCount) : desc(communities.memberCount));
+          break;
+        case 'createdAt':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(communities.createdAt) : desc(communities.createdAt));
+          break;
+        case 'updatedAt':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(communities.updatedAt) : desc(communities.updatedAt));
+          break;
+        case 'isVerified':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(communities.isVerified) : desc(communities.isVerified));
+          break;
+      }
+    }
+
+    const results = await orderedQuery
       .limit(pageSize)
       .offset(offset);
 
@@ -126,11 +266,11 @@ export class CommunityService {
 
   // Delete Community
   static async deleteCommunity(id: string) {
-    const [community] = await db.delete(communities)
+    const communitiesResult = await db.delete(communities)
       .where(eq(communities.id, id))
       .returning();
 
-    return community;
+    return communitiesResult[0];
   }
 
   // Get Communities by User

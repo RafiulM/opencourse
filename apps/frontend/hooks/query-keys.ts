@@ -3,14 +3,16 @@ export const queryKeys = {
   communities: {
     all: ['communities'] as const,
     lists: () => [...queryKeys.communities.all, 'list'] as const,
-    list: (filters: Record<string, any>) => [...queryKeys.communities.lists(), { filters }] as const,
+    list: (params: { page?: number; limit?: number; filters?: Record<string, any>; sort?: string[] }) => 
+      [...queryKeys.communities.lists(), params] as const,
     details: () => [...queryKeys.communities.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.communities.details(), id] as const,
   },
   courses: {
     all: ['courses'] as const,
     lists: () => [...queryKeys.courses.all, 'list'] as const,
-    list: (filters: Record<string, any>) => [...queryKeys.courses.lists(), { filters }] as const,
+    list: (params: { page?: number; limit?: number; filters?: Record<string, any>; sort?: string[] }) => 
+      [...queryKeys.courses.lists(), params] as const,
     details: () => [...queryKeys.courses.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.courses.details(), id] as const,
   },
@@ -31,8 +33,34 @@ export const queryKeys = {
   quizzes: {
     all: ['quizzes'] as const,
     lists: () => [...queryKeys.quizzes.all, 'list'] as const,
-    list: (filters: Record<string, any>) => [...queryKeys.quizzes.lists(), { filters }] as const,
+    list: (params: { page?: number; limit?: number; filters?: Record<string, any>; sort?: string[] }) => 
+      [...queryKeys.quizzes.lists(), params] as const,
     details: () => [...queryKeys.quizzes.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.quizzes.details(), id] as const,
+  },
+  enrollments: {
+    all: ['enrollments'] as const,
+    lists: () => [...queryKeys.enrollments.all, 'list'] as const,
+    list: (params: { page?: number; limit?: number; filters?: Record<string, any>; sort?: string[] }) => 
+      [...queryKeys.enrollments.lists(), params] as const,
+    details: () => [...queryKeys.enrollments.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.enrollments.details(), id] as const,
+  },
+  uploads: {
+    all: ['uploads'] as const,
+    lists: () => [...queryKeys.uploads.all, 'list'] as const,
+    list: (params: { page?: number; limit?: number; filters?: Record<string, any>; sort?: string[] }) => 
+      [...queryKeys.uploads.lists(), params] as const,
+    details: () => [...queryKeys.uploads.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.uploads.details(), id] as const,
+  },
+  leaderboards: {
+    all: ['leaderboards'] as const,
+    communityLists: () => [...queryKeys.leaderboards.all, 'community'] as const,
+    communityList: (communityId: string, params: { page?: number; limit?: number; filters?: Record<string, any>; sort?: string[] }) => 
+      [...queryKeys.leaderboards.communityLists(), communityId, params] as const,
+    courseLists: () => [...queryKeys.leaderboards.all, 'course'] as const,
+    courseList: (courseId: string, params: { page?: number; limit?: number; filters?: Record<string, any>; sort?: string[] }) => 
+      [...queryKeys.leaderboards.courseLists(), courseId, params] as const,
   },
 };

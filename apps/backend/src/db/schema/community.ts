@@ -2,6 +2,7 @@ import { boolean, index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqu
 import { user } from "./auth";
 import { relations } from "drizzle-orm";
 import { courses } from "./course";
+import { uploads } from "./uploads";
 
 export const communityRoleEnum = pgEnum('community_role', ['owner', 'moderator', 'member']);
 export const communityPrivacyEnum = pgEnum('community_privacy', ['public', 'private', 'invite_only']);
@@ -12,8 +13,10 @@ export const communities = pgTable('communities', {
     slug: varchar('slug', { length: 255 }).notNull().unique(),
     domain: varchar('domain', { length: 255 }).unique(), // Custom domain support
     description: text('description'),
-    banner: text('banner'),
-    avatar: text('avatar'),
+    banner: text('banner'), // Direct URL for backward compatibility
+    avatar: text('avatar'), // Direct URL for backward compatibility
+    bannerUploadId: uuid('banner_upload_id').references(() => uploads.id),
+    avatarUploadId: uuid('avatar_upload_id').references(() => uploads.id),
     privacy: communityPrivacyEnum('privacy').default('public').notNull(),
     settings: jsonb('settings').default({}),
     // Removed customization fields related to drag-and-drop/page building
@@ -46,7 +49,15 @@ export const communitiesRelations = relations(communities, ({ one, many }) => ({
     }),
     members: many(communityMembers),
     courses: many(courses),
-    // Removed pages and widgets relations
+    uploads: many(uploads),
+    bannerUpload: one(uploads, {
+        fields: [communities.bannerUploadId],
+        references: [uploads.id],
+    }),
+    avatarUpload: one(uploads, {
+        fields: [communities.avatarUploadId],
+        references: [uploads.id],
+    }),
 }));
 
 export const communityMembersRelations = relations(communityMembers, ({ one }) => ({

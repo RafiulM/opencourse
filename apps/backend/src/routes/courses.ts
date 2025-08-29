@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { CourseService, CourseModuleService, CourseMaterialService } from '../services/course';
 import { AppError, formatErrorResponse, handleDatabaseError } from '../lib/errors';
-import { validatePaginationParams } from '../lib/validation';
+import { validatePaginationParams, validateCourseQueryOptions } from '../lib/validation';
 import { authenticate, optionalAuth } from '../middleware/auth';
 
 const router: Router = Router();
@@ -82,7 +82,7 @@ router.post('/', authenticate, async (req, res) => {
  * @swagger
  * /api/courses:
  *   get:
- *     summary: Get all courses
+ *     summary: Get all courses with filtering, sorting, and search
  *     tags: [Courses]
  *     parameters:
  *       - in: query
@@ -115,27 +115,90 @@ router.post('/', authenticate, async (req, res) => {
  *         name: difficulty
  *         schema:
  *           type: string
+ *       - in: query
+ *         name: priceMin
+ *         schema:
+ *           type: number
+ *       - in: query
+ *         name: priceMax
+ *         schema:
+ *           type: number
+ *       - in: query
+ *         name: durationMin
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: durationMax
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: enrollmentCountMin
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: enrollmentCountMax
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           description: Comma-separated list of sort fields with optional + (asc) or - (desc) prefix
+ *           example: "-createdAt,+title"
  *     responses:
  *       200:
  *         description: List of courses
  */
 router.get('/', optionalAuth, async (req, res) => {
   try {
-    const { page = 1, pageSize = 20, ...filters } = req.query;
-    validatePaginationParams(page, pageSize);
+    const queryOptions = validateCourseQueryOptions(req.query);
     
-    const result = await CourseService.getAllCourses(
-      Number(page), 
-      Number(pageSize), 
-      filters as any
-    );
+    const filters: any = {};
+    if (queryOptions.filters.communityId) filters.communityId = queryOptions.filters.communityId;
+    if (queryOptions.filters.instructorId) filters.instructorId = queryOptions.filters.instructorId;
+    if (queryOptions.filters.isPublished !== undefined) filters.isPublished = queryOptions.filters.isPublished;
+    if (queryOptions.filters.isFeatured !== undefined) filters.isFeatured = queryOptions.filters.isFeatured;
+    if (queryOptions.filters.difficulty) filters.difficulty = queryOptions.filters.difficulty;
+    
+    if (queryOptions.filters.price) {
+      filters.price = {};
+      if (queryOptions.filters.price.min) filters.price.min = queryOptions.filters.price.min;
+      if (queryOptions.filters.price.max) filters.price.max = queryOptions.filters.price.max;
+    }
+    
+    if (queryOptions.filters.duration) {
+      filters.duration = {};
+      if (queryOptions.filters.duration.min) filters.duration.min = queryOptions.filters.duration.min;
+      if (queryOptions.filters.duration.max) filters.duration.max = queryOptions.filters.duration.max;
+    }
+    
+    if (queryOptions.filters.enrollmentCount) {
+      filters.enrollmentCount = {};
+      if (queryOptions.filters.enrollmentCount.min) filters.enrollmentCount.min = queryOptions.filters.enrollmentCount.min;
+      if (queryOptions.filters.enrollmentCount.max) filters.enrollmentCount.max = queryOptions.filters.enrollmentCount.max;
+    }
+    
+    if (queryOptions.filters.createdAt) filters.createdAt = queryOptions.filters.createdAt;
+    if (queryOptions.filters.updatedAt) filters.updatedAt = queryOptions.filters.updatedAt;
+    
+    const result = await CourseService.getAllCourses({
+      page: queryOptions.page,
+      pageSize: queryOptions.pageSize,
+      filters,
+      search: queryOptions.search,
+      sort: queryOptions.sort
+    });
     
     res.json({
       success: true,
       data: result.courses,
       pagination: {
-        page: Number(page),
-        pageSize: Number(pageSize),
+        page: queryOptions.page,
+        pageSize: queryOptions.pageSize,
         total: result.totalCount,
         totalPages: result.totalPages
       }
@@ -520,11 +583,20 @@ router.get('/modules/:moduleId', async (req, res) => {
   try {
     const module = await CourseModuleService.getCourseModuleById(req.params.moduleId);
     if (!module) {
-      return res.status(404).json({ error: 'Module not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Module not found' 
+      });
     }
-    res.json(module);
+    res.json({
+      success: true,
+      data: module
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -561,11 +633,21 @@ router.put('/modules/:moduleId', async (req, res) => {
   try {
     const module = await CourseModuleService.updateCourseModule(req.params.moduleId, req.body);
     if (!module) {
-      return res.status(404).json({ error: 'Module not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Module not found' 
+      });
     }
-    res.json(module);
+    res.json({
+      success: true,
+      data: module,
+      message: 'Module updated successfully'
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -589,11 +671,21 @@ router.delete('/modules/:moduleId', async (req, res) => {
   try {
     const module = await CourseModuleService.deleteCourseModule(req.params.moduleId);
     if (!module) {
-      return res.status(404).json({ error: 'Module not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Module not found' 
+      });
     }
-    res.json({ message: 'Module deleted successfully', module });
+    res.json({ 
+      success: true,
+      data: module,
+      message: 'Module deleted successfully' 
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -648,9 +740,16 @@ router.post('/modules/:moduleId/materials', async (req, res) => {
       moduleId: req.params.moduleId,
       ...req.body
     });
-    res.status(201).json(material);
+    res.status(201).json({
+      success: true,
+      data: material,
+      message: 'Material created successfully'
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -681,9 +780,15 @@ router.get('/modules/:moduleId/materials', async (req, res) => {
     const materials = type 
       ? await CourseMaterialService.getMaterialsByType(req.params.moduleId, type as any)
       : await CourseMaterialService.getMaterialsByModule(req.params.moduleId);
-    res.json(materials);
+    res.json({
+      success: true,
+      data: materials
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -709,11 +814,20 @@ router.get('/materials/:materialId', async (req, res) => {
   try {
     const material = await CourseMaterialService.getCourseMaterialById(req.params.materialId);
     if (!material) {
-      return res.status(404).json({ error: 'Material not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Material not found' 
+      });
     }
-    res.json(material);
+    res.json({
+      success: true,
+      data: material
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -763,11 +877,21 @@ router.put('/materials/:materialId', async (req, res) => {
   try {
     const material = await CourseMaterialService.updateCourseMaterial(req.params.materialId, req.body);
     if (!material) {
-      return res.status(404).json({ error: 'Material not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Material not found' 
+      });
     }
-    res.json(material);
+    res.json({
+      success: true,
+      data: material,
+      message: 'Material updated successfully'
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -791,11 +915,21 @@ router.delete('/materials/:materialId', async (req, res) => {
   try {
     const material = await CourseMaterialService.deleteCourseMaterial(req.params.materialId);
     if (!material) {
-      return res.status(404).json({ error: 'Material not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Material not found' 
+      });
     }
-    res.json({ message: 'Material deleted successfully', material });
+    res.json({ 
+      success: true,
+      data: material,
+      message: 'Material deleted successfully' 
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -818,9 +952,15 @@ router.delete('/materials/:materialId', async (req, res) => {
 router.get('/:courseId/preview', async (req, res) => {
   try {
     const materials = await CourseMaterialService.getPreviewMaterials(req.params.courseId);
-    res.json(materials);
+    res.json({
+      success: true,
+      data: materials
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 

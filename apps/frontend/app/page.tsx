@@ -1,116 +1,96 @@
 "use client"
 
 import Link from "next/link"
-import { useSession, signOut } from "../lib/auth"
+import { useSession } from "../lib/auth"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { LogOut, BookOpen } from "lucide-react"
+import { BookOpen, Users } from "lucide-react"
+import { CommunityExplorer } from "@/components/community-explorer"
+import { Navbar } from "@/components/navbar"
 
 export default function Home() {
   const { data: session } = useSession()
   console.log("home session", session)
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word.charAt(0))
-      .join('')
-      .toUpperCase()
-      .slice(0, 2)
-  }
-
   return (
     <div className="min-h-screen bg-background">
-      <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
-              <BookOpen className="h-6 w-6 text-primary" />
-              <h1 className="text-xl font-bold">OpenCourse</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              {session ? (
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>
-                        {getInitials(session.user.name || session.user.email || 'U')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm font-medium">
-                      Welcome, {session.user.name || session.user.email}!
-                    </span>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => signOut()}
-                    className="flex items-center space-x-2"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span>Sign out</span>
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <Button variant="ghost" asChild>
-                    <Link href="/login">Sign in</Link>
-                  </Button>
-                  <Button asChild>
-                    <Link href="/signup">Sign up</Link>
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
-      <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div className="text-center space-y-8">
-          <div className="space-y-4">
-            <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
-              Welcome to{" "}
-              <span className="text-primary">OpenCourse</span>
-            </h1>
-            <p className="mt-5 max-w-xl mx-auto text-xl text-muted-foreground">
-              Your platform for online learning and course management. Discover, learn, and grow with our comprehensive course library.
-            </p>
-          </div>
+      <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {/* Hero Section */}
+        <div className="text-center space-y-6 mb-12">
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+            Welcome to{" "}
+            <span className="text-primary">OpenCourse</span>
+          </h1>
+          <p className="max-w-3xl mx-auto text-xl text-muted-foreground">
+            Your platform for discovering and joining learning communities. Browse communities below, each offering specialized courses, resources, and collaborative learning experiences.
+          </p>
 
-          {session ? (
-            <Card className="max-w-2xl mx-auto">
-              <CardHeader>
-                <CardTitle>Welcome back!</CardTitle>
-                <CardDescription>
-                  Ready to continue your learning journey?
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button size="lg" className="flex-1 max-w-xs">
-                    Browse Courses
-                  </Button>
-                  <Button variant="outline" size="lg" className="flex-1 max-w-xs">
-                    My Learning
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
+          {!session && (
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
               <Button size="lg" asChild>
-                <Link href="/signup" className="inline-flex items-center px-8 py-3 text-lg">
-                  Get started
+                <Link href="/signup">
+                  Join a Community
                 </Link>
               </Button>
-              <p className="text-sm text-muted-foreground">
-                Join thousands of learners already on OpenCourse
-              </p>
+              <Button variant="outline" size="lg" asChild>
+                <Link href="/login">
+                  Sign In
+                </Link>
+              </Button>
             </div>
           )}
         </div>
+
+        {/* Communities Section */}
+        <CommunityExplorer
+          showHeader={false}
+          showViewToggle={true}
+          showCreateButton={false}
+          className="mb-12"
+        />
+
+        {/* Features Section */}
+        {session && (
+          <section className="mt-20 grid gap-8 md:grid-cols-2 max-w-2xl mx-auto">
+            <Card className="text-center">
+              <CardHeader>
+                <BookOpen className="h-12 w-12 text-primary mx-auto mb-2" />
+                <CardTitle>Manage Content</CardTitle>
+                <CardDescription>
+                  Access your admin dashboard to manage courses, modules, and materials.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="outline" className="w-full" asChild>
+                  <Link href="/dashboard/admin">
+                    Go to Dashboard
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="text-center">
+              <CardHeader>
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
+                  <span className="text-2xl">🎓</span>
+                </div>
+                <CardTitle>Learning Journey</CardTitle>
+                <CardDescription>
+                  Track your progress and continue building amazing learning experiences.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="outline" className="w-full" asChild>
+                  <Link href="/dashboard/admin">
+                    View Progress
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </section>
+        )}
       </main>
     </div>
   )

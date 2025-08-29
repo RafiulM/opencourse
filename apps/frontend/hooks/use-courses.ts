@@ -8,10 +8,15 @@ import {
 import { queryKeys } from './query-keys';
 
 // Courses Hooks
-export function useCourses(page = 1, limit = 20, communityId?: string) {
+export function useCourses(
+  page = 1, 
+  limit = 20, 
+  filters: Record<string, any> = {},
+  sort: string[] = []
+) {
   return useQuery({
-    queryKey: queryKeys.courses.list({ page, limit, communityId }),
-    queryFn: () => apiClient.getCourses(page, limit, communityId),
+    queryKey: queryKeys.courses.list({ page, limit, filters, sort }),
+    queryFn: () => apiClient.getCourses(page, limit, filters, sort),
   });
 }
 

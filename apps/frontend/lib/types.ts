@@ -124,6 +124,37 @@ export interface Enrollment {
   completedAt?: string;
   progress: number;
   lastAccessedAt?: string;
+  status: 'enrolled' | 'completed' | 'dropped';
+}
+
+export interface Upload {
+  id: string;
+  userId: string;
+  originalName: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  uploadType: 'community_avatar' | 'community_banner' | 'course_thumbnail' | 'module_thumbnail' | 'material_video' | 'material_file' | 'material_document' | 'user_avatar';
+  status: 'uploading' | 'processing' | 'completed' | 'failed' | 'deleted';
+  communityId?: string;
+  courseId?: string;
+  moduleId?: string;
+  materialId?: string;
+  metadata?: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LeaderboardEntry {
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  totalPoints: number;
+  coursesCompleted?: number; // Community leaderboard only
+  quizzesPassed: number;
+  averageQuizScore: number;
+  streak?: number; // Community leaderboard only
+  lastActivityAt: string;
 }
 
 // API Response Types
@@ -139,7 +170,7 @@ export interface PaginatedResponse<T> {
   data: T[];
   pagination: {
     page: number;
-    limit: number;
+    pageSize: number;
     total: number;
     totalPages: number;
   };

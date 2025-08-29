@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { EnrollmentService, MaterialProgressService } from '../services/enrollment';
+import { validateEnrollmentQueryOptions } from '../lib/validation';
 
 const router: Router = Router();
 
@@ -34,9 +35,16 @@ const router: Router = Router();
 router.post('/', async (req, res) => {
   try {
     const enrollment = await EnrollmentService.createEnrollment(req.body);
-    res.status(201).json(enrollment);
+    res.status(201).json({
+      success: true,
+      data: enrollment,
+      message: 'Enrollment created successfully'
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -62,30 +70,108 @@ router.get('/:id', async (req, res) => {
   try {
     const enrollment = await EnrollmentService.getEnrollmentById(req.params.id);
     if (!enrollment) {
-      return res.status(404).json({ error: 'Enrollment not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Enrollment not found' 
+      });
     }
-    res.json(enrollment);
+    res.json({
+      success: true,
+      data: enrollment
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
-/**\n * @swagger\n * /api/enrollments/user/{userId}:\n *   get:\n *     summary: Get user enrollments\n *     tags: [Enrollments]\n *     parameters:\n *       - in: path\n *         name: userId\n *         required: true\n *         schema:\n *           type: string\n *       - in: query\n *         name: page\n *         schema:\n *           type: integer\n *           default: 1\n *       - in: query\n *         name: pageSize\n *         schema:\n *           type: integer\n *           default: 20\n *       - in: query\n *         name: status\n *         schema:\n *           type: string\n *           enum: [enrolled, completed, dropped]\n *     responses:\n *       200:\n *         description: List of user enrollments\n */
+/**
+ * @swagger
+ * /api/enrollments/user/{userId}:
+ *   get:
+ *     summary: Get user enrollments with filtering, sorting, and search
+ *     tags: [Enrollments]
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *       - in: query
+ *         name: courseId
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [enrolled, completed, dropped]
+ *       - in: query
+ *         name: progressMin
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           maximum: 100
+ *       - in: query
+ *         name: progressMax
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           maximum: 100
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           description: Comma-separated list of sort fields with optional + (asc) or - (desc) prefix
+ *           example: "-enrolledAt,+progress"
+ *     responses:
+ *       200:
+ *         description: List of user enrollments
+ */
 router.get('/user/:userId', async (req, res) => {
   try {
-    const { page = 1, pageSize = 20, status } = req.query;
+    const queryOptions = validateEnrollmentQueryOptions(req.query);
+    
+    const filters: any = {};
+    if (queryOptions.filters.courseId) filters.courseId = queryOptions.filters.courseId;
+    if (queryOptions.filters.status) filters.status = queryOptions.filters.status;
+    if (queryOptions.filters.progress) {
+      filters.progress = {};
+      if (queryOptions.filters.progress.min) filters.progress.min = queryOptions.filters.progress.min;
+      if (queryOptions.filters.progress.max) filters.progress.max = queryOptions.filters.progress.max;
+    }
+    if (queryOptions.filters.enrolledAt) filters.enrolledAt = queryOptions.filters.enrolledAt;
+    if (queryOptions.filters.completedAt) filters.completedAt = queryOptions.filters.completedAt;
+    if (queryOptions.filters.lastAccessedAt) filters.lastAccessedAt = queryOptions.filters.lastAccessedAt;
+    
     const result = await EnrollmentService.getUserEnrollments(
       req.params.userId,
-      Number(page),
-      Number(pageSize),
-      status as any
+      {
+        page: queryOptions.page,
+        pageSize: queryOptions.pageSize,
+        filters,
+        sort: queryOptions.sort
+      }
     );
+    
     res.json({
       success: true,
       data: result.enrollments,
       pagination: {
-        page: Number(page),
-        pageSize: Number(pageSize),
+        page: queryOptions.page,
+        pageSize: queryOptions.pageSize,
         total: result.totalCount,
         totalPages: result.totalPages
       }
@@ -95,22 +181,91 @@ router.get('/user/:userId', async (req, res) => {
   }
 });
 
-/**\n * @swagger\n * /api/enrollments/course/{courseId}:\n *   get:\n *     summary: Get course enrollments\n *     tags: [Enrollments]\n *     parameters:\n *       - in: path\n *         name: courseId\n *         required: true\n *         schema:\n *           type: string\n *       - in: query\n *         name: page\n *         schema:\n *           type: integer\n *           default: 1\n *       - in: query\n *         name: pageSize\n *         schema:\n *           type: integer\n *           default: 50\n *       - in: query\n *         name: status\n *         schema:\n *           type: string\n *           enum: [enrolled, completed, dropped]\n *     responses:\n *       200:\n *         description: List of course enrollments\n */
+/**
+ * @swagger
+ * /api/enrollments/course/{courseId}:
+ *   get:
+ *     summary: Get course enrollments with filtering, sorting, and search
+ *     tags: [Enrollments]
+ *     parameters:
+ *       - in: path
+ *         name: courseId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *       - in: query
+ *         name: userId
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [enrolled, completed, dropped]
+ *       - in: query
+ *         name: progressMin
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           maximum: 100
+ *       - in: query
+ *         name: progressMax
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           maximum: 100
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           description: Comma-separated list of sort fields with optional + (asc) or - (desc) prefix
+ *           example: "-enrolledAt,+progress"
+ *     responses:
+ *       200:
+ *         description: List of course enrollments
+ */
 router.get('/course/:courseId', async (req, res) => {
   try {
-    const { page = 1, pageSize = 50, status } = req.query;
+    const queryOptions = validateEnrollmentQueryOptions(req.query);
+    
+    const filters: any = {};
+    if (queryOptions.filters.userId) filters.userId = queryOptions.filters.userId;
+    if (queryOptions.filters.status) filters.status = queryOptions.filters.status;
+    if (queryOptions.filters.progress) {
+      filters.progress = {};
+      if (queryOptions.filters.progress.min) filters.progress.min = queryOptions.filters.progress.min;
+      if (queryOptions.filters.progress.max) filters.progress.max = queryOptions.filters.progress.max;
+    }
+    if (queryOptions.filters.enrolledAt) filters.enrolledAt = queryOptions.filters.enrolledAt;
+    if (queryOptions.filters.completedAt) filters.completedAt = queryOptions.filters.completedAt;
+    if (queryOptions.filters.lastAccessedAt) filters.lastAccessedAt = queryOptions.filters.lastAccessedAt;
+    
     const result = await EnrollmentService.getCourseEnrollments(
       req.params.courseId,
-      Number(page),
-      Number(pageSize),
-      status as any
+      {
+        page: queryOptions.page,
+        pageSize: queryOptions.pageSize,
+        filters,
+        sort: queryOptions.sort
+      }
     );
+    
     res.json({
       success: true,
       data: result.enrollments,
       pagination: {
-        page: Number(page),
-        pageSize: Number(pageSize),
+        page: queryOptions.page,
+        pageSize: queryOptions.pageSize,
         total: result.totalCount,
         totalPages: result.totalPages
       }
@@ -154,11 +309,21 @@ router.put('/:id', async (req, res) => {
   try {
     const enrollment = await EnrollmentService.updateEnrollment(req.params.id, req.body);
     if (!enrollment) {
-      return res.status(404).json({ error: 'Enrollment not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Enrollment not found' 
+      });
     }
-    res.json(enrollment);
+    res.json({
+      success: true,
+      data: enrollment,
+      message: 'Enrollment updated successfully'
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -182,11 +347,21 @@ router.delete('/:id', async (req, res) => {
   try {
     const enrollment = await EnrollmentService.deleteEnrollment(req.params.id);
     if (!enrollment) {
-      return res.status(404).json({ error: 'Enrollment not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Enrollment not found' 
+      });
     }
-    res.json({ message: 'Enrollment deleted successfully', enrollment });
+    res.json({ 
+      success: true,
+      data: enrollment,
+      message: 'Enrollment deleted successfully' 
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -237,9 +412,16 @@ router.post('/:enrollmentId/progress', async (req, res) => {
       req.params.enrollmentId,
       progressData
     );
-    res.json(progress);
+    res.json({
+      success: true,
+      data: progress,
+      message: 'Progress updated successfully'
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -262,9 +444,15 @@ router.post('/:enrollmentId/progress', async (req, res) => {
 router.get('/:enrollmentId/progress', async (req, res) => {
   try {
     const progress = await MaterialProgressService.getMaterialProgressByEnrollment(req.params.enrollmentId);
-    res.json(progress);
+    res.json({
+      success: true,
+      data: progress
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 
@@ -287,9 +475,15 @@ router.get('/:enrollmentId/progress', async (req, res) => {
 router.get('/:enrollmentId/stats', async (req, res) => {
   try {
     const stats = await MaterialProgressService.getCompletionStats(req.params.enrollmentId);
-    res.json(stats);
+    res.json({
+      success: true,
+      data: stats
+    });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ 
+      success: false,
+      error: (error as Error).message 
+    });
   }
 });
 

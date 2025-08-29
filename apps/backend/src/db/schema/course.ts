@@ -3,6 +3,7 @@ import { communities } from "./community";
 import { user } from "./auth";
 import { enrollments, materialProgress } from "./enrollment";
 import { quizzes } from "./quiz";
+import { uploads } from "./uploads";
 import { relations } from "drizzle-orm";
 
 export const materialTypeEnum = pgEnum('material_type', ['video', 'text', 'file', 'link']);
@@ -13,7 +14,8 @@ export const courses = pgTable('courses', {
     title: varchar('title', { length: 255 }).notNull(),
     slug: varchar('slug', { length: 255 }).notNull(),
     description: text('description'),
-    thumbnail: text('thumbnail'),
+    thumbnail: text('thumbnail'), // Direct URL for backward compatibility
+    thumbnailUploadId: uuid('thumbnail_upload_id').references(() => uploads.id),
     price: decimal('price', { precision: 10, scale: 2 }).default('0'),
     isPublished: boolean('is_published').default(false).notNull(),
     isFeatured: boolean('is_featured').default(false).notNull(),
@@ -37,6 +39,8 @@ export const courseModules = pgTable('course_modules', {
     courseId: uuid('course_id').notNull().references(() => courses.id, { onDelete: 'cascade' }),
     title: varchar('title', { length: 255 }).notNull(),
     description: text('description'),
+    thumbnail: text('thumbnail'), // Direct URL for module thumbnails
+    thumbnailUploadId: uuid('thumbnail_upload_id').references(() => uploads.id),
     order: integer('order').notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -51,7 +55,8 @@ export const courseMaterials = pgTable('course_materials', {
     description: text('description'),
     type: materialTypeEnum('type').notNull(),
     content: text('content'), // For text content
-    url: text('url'), // For video/file URLs
+    url: text('url'), // For video/file URLs - backward compatibility
+    fileUploadId: uuid('file_upload_id').references(() => uploads.id), // Reference to uploaded file
     metadata: jsonb('metadata').default({}), // Store additional info like video duration, file size, etc.
     order: integer('order').notNull(),
     duration: integer('duration'), // in minutes (for videos)
@@ -75,6 +80,11 @@ export const coursesRelations = relations(courses, ({ one, many }) => ({
     modules: many(courseModules),
     enrollments: many(enrollments),
     quizzes: many(quizzes),
+    uploads: many(uploads),
+    thumbnailUpload: one(uploads, {
+        fields: [courses.thumbnailUploadId],
+        references: [uploads.id],
+    }),
 }));
 
 export const courseModulesRelations = relations(courseModules, ({ one, many }) => ({
@@ -84,6 +94,11 @@ export const courseModulesRelations = relations(courseModules, ({ one, many }) =
     }),
     materials: many(courseMaterials),
     quizzes: many(quizzes),
+    uploads: many(uploads),
+    thumbnailUpload: one(uploads, {
+        fields: [courseModules.thumbnailUploadId],
+        references: [uploads.id],
+    }),
 }));
 
 export const courseMaterialsRelations = relations(courseMaterials, ({ one, many }) => ({
@@ -92,5 +107,10 @@ export const courseMaterialsRelations = relations(courseMaterials, ({ one, many 
         references: [courseModules.id],
     }),
     progress: many(materialProgress),
+    uploads: many(uploads),
+    fileUpload: one(uploads, {
+        fields: [courseMaterials.fileUploadId],
+        references: [uploads.id],
+    }),
 }));
 

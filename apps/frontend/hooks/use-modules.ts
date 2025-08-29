@@ -19,14 +19,16 @@ export function useCourseModules(courseId: string, enabled = true) {
 export function useCourseModule(id: string, enabled = true) {
   return useQuery({
     queryKey: queryKeys.modules.detail(id),
-    queryFn: () => apiClient.getCourseModule(id),
+    queryFn: async () => {
+      return await apiClient.getCourseModule(id);
+    },
     enabled: enabled && !!id,
   });
 }
 
 export function useCreateCourseModule() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (data: CreateCourseModuleRequest) => apiClient.createCourseModule(data),
     onSuccess: (_, variables) => {
@@ -37,7 +39,7 @@ export function useCreateCourseModule() {
 
 export function useUpdateCourseModule() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (data: UpdateCourseModuleRequest) => apiClient.updateCourseModule(data),
     onSuccess: (_, variables) => {
@@ -51,7 +53,7 @@ export function useUpdateCourseModule() {
 
 export function useDeleteCourseModule() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (id: string) => apiClient.deleteCourseModule(id),
     onSuccess: () => {

@@ -8,10 +8,15 @@ import {
 import { queryKeys } from './query-keys';
 
 // Communities Hooks
-export function useCommunities(page = 1, limit = 20) {
+export function useCommunities(
+  page = 1, 
+  limit = 20, 
+  filters: Record<string, any> = {},
+  sort: string[] = []
+) {
   return useQuery({
-    queryKey: queryKeys.communities.list({ page, limit }),
-    queryFn: () => apiClient.getCommunities(page, limit),
+    queryKey: queryKeys.communities.list({ page, limit, filters, sort }),
+    queryFn: () => apiClient.getCommunities(page, limit, filters, sort),
   });
 }
 

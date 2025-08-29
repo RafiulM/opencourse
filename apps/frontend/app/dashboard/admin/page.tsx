@@ -16,10 +16,22 @@ import {
 } from "lucide-react"
 import { useCommunities } from "@/hooks/use-communities"
 import { useCourses } from "@/hooks/use-courses"
+import { useQuizzes } from "@/hooks/use-quizzes"
+import { useContentStats } from "@/hooks/use-content-stats"
 
 export default function AdminDashboard() {
-  const { data: communitiesData } = useCommunities(1, 5)
-  const { data: coursesData } = useCourses(1, 5)
+  const { data: communitiesData } = useCommunities(1, 100) // Get all communities for accurate count
+  const { data: coursesData } = useCourses(1, 100) // Get all courses for accurate count
+  const { data: quizzesData } = useQuizzes(1, 100) // Get all quizzes for content count
+  const { totalModules, totalMaterials, totalContentItems, isLoading } = useContentStats()
+
+  // Calculate total students from communities
+  const totalStudents = communitiesData?.data?.reduce((sum, community) => 
+    sum + (community.memberCount || 0), 0) || 0
+
+  // Calculate total content items
+  const totalQuizzes = quizzesData?.data?.length || 0
+  const contentItemsCount = totalContentItems + totalQuizzes
 
   const stats = [
     {
@@ -38,14 +50,14 @@ export default function AdminDashboard() {
     },
     {
       title: "Active Students",
-      value: "1,234", // This would come from your API
+      value: totalStudents.toLocaleString(),
       icon: Users,
       color: "text-purple-600",
       bgColor: "bg-purple-50"
     },
     {
       title: "Content Items",
-      value: "5,678", // This would come from your API
+      value: isLoading ? "..." : contentItemsCount.toLocaleString(),
       icon: FileText,
       color: "text-orange-600",
       bgColor: "bg-orange-50"

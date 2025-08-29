@@ -5,7 +5,8 @@ import {
   validateCommunityData, 
   validateCommunityUpdateData, 
   validateAddMemberData,
-  validatePaginationParams 
+  validatePaginationParams,
+  validateCommunityQueryOptions
 } from '../lib/validation';
 import { authenticate, optionalAuth } from '../middleware/auth';
 
@@ -87,7 +88,7 @@ router.post('/', authenticate, async (req, res) => {
  * @swagger
  * /api/communities:
  *   get:
- *     summary: Get all communities
+ *     summary: Get all communities with filtering, sorting, and search
  *     tags: [Communities]
  *     parameters:
  *       - in: query
@@ -105,27 +106,66 @@ router.post('/', authenticate, async (req, res) => {
  *         schema:
  *           type: string
  *           enum: [public, private, invite_only]
+ *       - in: query
+ *         name: createdBy
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: isVerified
+ *         schema:
+ *           type: boolean
+ *       - in: query
+ *         name: memberCountMin
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: memberCountMax
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           description: Comma-separated list of sort fields with optional + (asc) or - (desc) prefix
+ *           example: "-createdAt,+name"
  *     responses:
  *       200:
  *         description: List of communities
  */
 router.get('/', optionalAuth, async (req, res) => {
   try {
-    const { page = 1, pageSize = 20, privacy } = req.query;
-    validatePaginationParams(page, pageSize);
+    const queryOptions = validateCommunityQueryOptions(req.query);
     
-    const result = await CommunityService.getAllCommunities(
-      Number(page), 
-      Number(pageSize), 
-      privacy as any
-    );
+    const filters: any = {};
+    if (queryOptions.filters.privacy) filters.privacy = queryOptions.filters.privacy;
+    if (queryOptions.filters.createdBy) filters.createdBy = queryOptions.filters.createdBy;
+    if (queryOptions.filters.isVerified !== undefined) filters.isVerified = queryOptions.filters.isVerified;
+    if (queryOptions.filters.memberCount) {
+      filters.memberCount = {};
+      if (queryOptions.filters.memberCount.min) filters.memberCount.min = queryOptions.filters.memberCount.min;
+      if (queryOptions.filters.memberCount.max) filters.memberCount.max = queryOptions.filters.memberCount.max;
+    }
+    if (queryOptions.filters.createdAt) filters.createdAt = queryOptions.filters.createdAt;
+    if (queryOptions.filters.updatedAt) filters.updatedAt = queryOptions.filters.updatedAt;
+    
+    const result = await CommunityService.getAllCommunities({
+      page: queryOptions.page,
+      pageSize: queryOptions.pageSize,
+      filters,
+      search: queryOptions.search,
+      sort: queryOptions.sort
+    });
     
     res.json({
       success: true,
       data: result.communities,
       pagination: {
-        page: Number(page),
-        pageSize: Number(pageSize),
+        page: queryOptions.page,
+        pageSize: queryOptions.pageSize,
         total: result.totalCount,
         totalPages: result.totalPages
       }

@@ -1,7 +1,7 @@
 import { db } from '../db';
 import { enrollments, materialProgress, enrollmentStatusEnum } from '../db/schema/enrollment';
 import { courses } from '../db/schema/course';
-import { eq, and, desc, count, avg } from 'drizzle-orm';
+import { eq, and, desc, asc, count, avg, gte, lte } from 'drizzle-orm';
 
 export interface CreateEnrollmentData {
   courseId: string;
@@ -31,6 +31,22 @@ export interface UpdateMaterialProgressData {
   lastPosition?: number;
   completedAt?: Date;
   lastAccessedAt?: Date;
+}
+
+export interface EnrollmentQueryOptions {
+  page?: number;
+  pageSize?: number;
+  filters?: {
+    userId?: string;
+    courseId?: string;
+    status?: 'enrolled' | 'completed' | 'dropped';
+    progress?: { min?: number; max?: number };
+    enrolledAt?: { start?: Date; end?: Date };
+    completedAt?: { start?: Date; end?: Date };
+    lastAccessedAt?: { start?: Date; end?: Date };
+  };
+  search?: string;
+  sort?: Array<{ field: string; order: 'asc' | 'desc' }>;
 }
 
 // Enrollment CRUD Operations
@@ -74,53 +90,136 @@ export class EnrollmentService {
     return enrollment;
   }
 
-  // Get User's Enrollments
-  static async getUserEnrollments(
-    userId: string,
-    page = 1,
-    pageSize = 20,
-    status?: 'enrolled' | 'completed' | 'dropped'
-  ) {
-    const query = db.select({
-      id: enrollments.id,
-      courseId: enrollments.courseId,
-      status: enrollments.status,
-      progress: enrollments.progress,
-      enrolledAt: enrollments.enrolledAt,
-      completedAt: enrollments.completedAt,
-      lastAccessedAt: enrollments.lastAccessedAt,
-      courseTitle: courses.title,
-      courseThumbnail: courses.thumbnail,
-      courseDescription: courses.description,
-    })
+  // Get User's Enrollments (with advanced filtering, sorting, and search)
+  static async getUserEnrollments(userId: string, options: EnrollmentQueryOptions = {}) {
+    const {
+      page = 1,
+      pageSize = 20,
+      filters = {},
+      search,
+      sort = [{ field: 'enrolledAt', order: 'desc' }]
+    } = options;
+
+    const query = db.select()
       .from(enrollments)
-      .innerJoin(courses, eq(enrollments.courseId, courses.id))
       .where(eq(enrollments.userId, userId));
 
     const dynamicQuery = query.$dynamic();
 
-    if (status) {
-      dynamicQuery.where(eq(enrollments.status, status));
+    // Apply filters
+    if (filters.courseId) {
+      dynamicQuery.where(eq(enrollments.courseId, filters.courseId));
+    }
+    if (filters.status) {
+      dynamicQuery.where(eq(enrollments.status, filters.status));
+    }
+    if (filters.progress) {
+      if (filters.progress.min !== undefined) {
+        dynamicQuery.where(gte(enrollments.progress, filters.progress.min));
+      }
+      if (filters.progress.max !== undefined) {
+        dynamicQuery.where(lte(enrollments.progress, filters.progress.max));
+      }
+    }
+    if (filters.enrolledAt) {
+      if (filters.enrolledAt.start) {
+        dynamicQuery.where(gte(enrollments.enrolledAt, filters.enrolledAt.start));
+      }
+      if (filters.enrolledAt.end) {
+        dynamicQuery.where(lte(enrollments.enrolledAt, filters.enrolledAt.end));
+      }
+    }
+    if (filters.completedAt) {
+      if (filters.completedAt.start) {
+        dynamicQuery.where(gte(enrollments.completedAt, filters.completedAt.start));
+      }
+      if (filters.completedAt.end) {
+        dynamicQuery.where(lte(enrollments.completedAt, filters.completedAt.end));
+      }
+    }
+    if (filters.lastAccessedAt) {
+      if (filters.lastAccessedAt.start) {
+        dynamicQuery.where(gte(enrollments.lastAccessedAt, filters.lastAccessedAt.start));
+      }
+      if (filters.lastAccessedAt.end) {
+        dynamicQuery.where(lte(enrollments.lastAccessedAt, filters.lastAccessedAt.end));
+      }
     }
 
     // Get total count
     const countQuery = db.select({ count: count() })
       .from(enrollments)
-      .innerJoin(courses, eq(enrollments.courseId, courses.id))
       .where(eq(enrollments.userId, userId));
     const dynamicCountQuery = countQuery.$dynamic();
 
     // Apply same filters to count query
-    if (status) {
-      dynamicCountQuery.where(eq(enrollments.status, status));
+    if (filters.courseId) {
+      dynamicCountQuery.where(eq(enrollments.courseId, filters.courseId));
+    }
+    if (filters.status) {
+      dynamicCountQuery.where(eq(enrollments.status, filters.status));
+    }
+    if (filters.progress) {
+      if (filters.progress.min !== undefined) {
+        dynamicCountQuery.where(gte(enrollments.progress, filters.progress.min));
+      }
+      if (filters.progress.max !== undefined) {
+        dynamicCountQuery.where(lte(enrollments.progress, filters.progress.max));
+      }
+    }
+    if (filters.enrolledAt) {
+      if (filters.enrolledAt.start) {
+        dynamicCountQuery.where(gte(enrollments.enrolledAt, filters.enrolledAt.start));
+      }
+      if (filters.enrolledAt.end) {
+        dynamicCountQuery.where(lte(enrollments.enrolledAt, filters.enrolledAt.end));
+      }
+    }
+    if (filters.completedAt) {
+      if (filters.completedAt.start) {
+        dynamicCountQuery.where(gte(enrollments.completedAt, filters.completedAt.start));
+      }
+      if (filters.completedAt.end) {
+        dynamicCountQuery.where(lte(enrollments.completedAt, filters.completedAt.end));
+      }
+    }
+    if (filters.lastAccessedAt) {
+      if (filters.lastAccessedAt.start) {
+        dynamicCountQuery.where(gte(enrollments.lastAccessedAt, filters.lastAccessedAt.start));
+      }
+      if (filters.lastAccessedAt.end) {
+        dynamicCountQuery.where(lte(enrollments.lastAccessedAt, filters.lastAccessedAt.end));
+      }
     }
 
     const [{ count: totalCount }] = await dynamicCountQuery;
     const totalPages = Math.ceil(totalCount / pageSize);
 
     const offset = (page - 1) * pageSize;
-    const results = await dynamicQuery
-      .orderBy(desc(enrollments.enrolledAt))
+
+    // Apply sorting
+    let orderedQuery = dynamicQuery;
+    for (const sortItem of sort) {
+      switch (sortItem.field) {
+        case 'progress':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(enrollments.progress) : desc(enrollments.progress));
+          break;
+        case 'status':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(enrollments.status) : desc(enrollments.status));
+          break;
+        case 'enrolledAt':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(enrollments.enrolledAt) : desc(enrollments.enrolledAt));
+          break;
+        case 'completedAt':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(enrollments.completedAt) : desc(enrollments.completedAt));
+          break;
+        case 'lastAccessedAt':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(enrollments.lastAccessedAt) : desc(enrollments.lastAccessedAt));
+          break;
+      }
+    }
+
+    const results = await orderedQuery
       .limit(pageSize)
       .offset(offset);
 
@@ -131,21 +230,60 @@ export class EnrollmentService {
     };
   }
 
-  // Get Course Enrollments
-  static async getCourseEnrollments(
-    courseId: string,
-    page = 1,
-    pageSize = 50,
-    status?: 'enrolled' | 'completed' | 'dropped'
-  ) {
+  // Get Course Enrollments (with advanced filtering, sorting, and search)
+  static async getCourseEnrollments(courseId: string, options: EnrollmentQueryOptions = {}) {
+    const {
+      page = 1,
+      pageSize = 50,
+      filters = {},
+      search,
+      sort = [{ field: 'enrolledAt', order: 'desc' }]
+    } = options;
+
     const query = db.select()
       .from(enrollments)
       .where(eq(enrollments.courseId, courseId));
 
     const dynamicQuery = query.$dynamic();
 
-    if (status) {
-      dynamicQuery.where(eq(enrollments.status, status));
+    // Apply filters
+    if (filters.userId) {
+      dynamicQuery.where(eq(enrollments.userId, filters.userId));
+    }
+    if (filters.status) {
+      dynamicQuery.where(eq(enrollments.status, filters.status));
+    }
+    if (filters.progress) {
+      if (filters.progress.min !== undefined) {
+        dynamicQuery.where(gte(enrollments.progress, filters.progress.min));
+      }
+      if (filters.progress.max !== undefined) {
+        dynamicQuery.where(lte(enrollments.progress, filters.progress.max));
+      }
+    }
+    if (filters.enrolledAt) {
+      if (filters.enrolledAt.start) {
+        dynamicQuery.where(gte(enrollments.enrolledAt, filters.enrolledAt.start));
+      }
+      if (filters.enrolledAt.end) {
+        dynamicQuery.where(lte(enrollments.enrolledAt, filters.enrolledAt.end));
+      }
+    }
+    if (filters.completedAt) {
+      if (filters.completedAt.start) {
+        dynamicQuery.where(gte(enrollments.completedAt, filters.completedAt.start));
+      }
+      if (filters.completedAt.end) {
+        dynamicQuery.where(lte(enrollments.completedAt, filters.completedAt.end));
+      }
+    }
+    if (filters.lastAccessedAt) {
+      if (filters.lastAccessedAt.start) {
+        dynamicQuery.where(gte(enrollments.lastAccessedAt, filters.lastAccessedAt.start));
+      }
+      if (filters.lastAccessedAt.end) {
+        dynamicQuery.where(lte(enrollments.lastAccessedAt, filters.lastAccessedAt.end));
+      }
     }
 
     // Get total count
@@ -155,16 +293,73 @@ export class EnrollmentService {
     const dynamicCountQuery = countQuery.$dynamic();
 
     // Apply same filters to count query
-    if (status) {
-      dynamicCountQuery.where(eq(enrollments.status, status));
+    if (filters.userId) {
+      dynamicCountQuery.where(eq(enrollments.userId, filters.userId));
+    }
+    if (filters.status) {
+      dynamicCountQuery.where(eq(enrollments.status, filters.status));
+    }
+    if (filters.progress) {
+      if (filters.progress.min !== undefined) {
+        dynamicCountQuery.where(gte(enrollments.progress, filters.progress.min));
+      }
+      if (filters.progress.max !== undefined) {
+        dynamicCountQuery.where(lte(enrollments.progress, filters.progress.max));
+      }
+    }
+    if (filters.enrolledAt) {
+      if (filters.enrolledAt.start) {
+        dynamicCountQuery.where(gte(enrollments.enrolledAt, filters.enrolledAt.start));
+      }
+      if (filters.enrolledAt.end) {
+        dynamicCountQuery.where(lte(enrollments.enrolledAt, filters.enrolledAt.end));
+      }
+    }
+    if (filters.completedAt) {
+      if (filters.completedAt.start) {
+        dynamicCountQuery.where(gte(enrollments.completedAt, filters.completedAt.start));
+      }
+      if (filters.completedAt.end) {
+        dynamicCountQuery.where(lte(enrollments.completedAt, filters.completedAt.end));
+      }
+    }
+    if (filters.lastAccessedAt) {
+      if (filters.lastAccessedAt.start) {
+        dynamicCountQuery.where(gte(enrollments.lastAccessedAt, filters.lastAccessedAt.start));
+      }
+      if (filters.lastAccessedAt.end) {
+        dynamicCountQuery.where(lte(enrollments.lastAccessedAt, filters.lastAccessedAt.end));
+      }
     }
 
     const [{ count: totalCount }] = await dynamicCountQuery;
     const totalPages = Math.ceil(totalCount / pageSize);
 
     const offset = (page - 1) * pageSize;
-    const results = await dynamicQuery
-      .orderBy(desc(enrollments.enrolledAt))
+
+    // Apply sorting
+    let orderedQuery = dynamicQuery;
+    for (const sortItem of sort) {
+      switch (sortItem.field) {
+        case 'progress':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(enrollments.progress) : desc(enrollments.progress));
+          break;
+        case 'status':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(enrollments.status) : desc(enrollments.status));
+          break;
+        case 'enrolledAt':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(enrollments.enrolledAt) : desc(enrollments.enrolledAt));
+          break;
+        case 'completedAt':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(enrollments.completedAt) : desc(enrollments.completedAt));
+          break;
+        case 'lastAccessedAt':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(enrollments.lastAccessedAt) : desc(enrollments.lastAccessedAt));
+          break;
+      }
+    }
+
+    const results = await orderedQuery
       .limit(pageSize)
       .offset(offset);
 

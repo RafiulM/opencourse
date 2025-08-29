@@ -27,6 +27,8 @@ import { Loader2 } from "lucide-react";
 import { Community, UpdateCommunityRequest } from "@/lib/types";
 import { useUpdateCommunity } from "@/hooks/use-communities";
 import { toast } from "sonner";
+import { AvatarUpload } from "@/components/uploads";
+import { useState } from "react";
 
 const updateCommunitySchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name too long"),
@@ -53,6 +55,8 @@ export function EditCommunitySheet({
   onOpenChange,
 }: EditCommunitySheetProps) {
   const updateCommunityMutation = useUpdateCommunity();
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUploadId, setAvatarUploadId] = useState<string | null>(null);
 
   const {
     register,
@@ -90,6 +94,8 @@ export function EditCommunitySheet({
         description: data.description || undefined,
         domain: data.domain || undefined,
         privacy: data.privacy,
+        avatar: avatarUrl || undefined,
+        avatarUploadId: avatarUploadId || undefined,
       };
 
       await updateCommunityMutation.mutateAsync(updateData);
@@ -120,6 +126,22 @@ export function EditCommunitySheet({
           </SheetHeader>
 
           <div className="flex-1 space-y-6 py-6">
+            {/* Community Avatar */}
+            <div className="space-y-2">
+              <Label>Community Avatar</Label>
+              <div className="flex justify-center">
+                <AvatarUpload
+                  currentAvatarUrl={community?.avatar}
+                  onAvatarUpdate={(url, uploadId) => {
+                    setAvatarUrl(url);
+                    setAvatarUploadId(uploadId);
+                  }}
+                  communityId={community?.id}
+                  size="lg"
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
               <Input

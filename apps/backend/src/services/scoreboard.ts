@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { userScores, achievements, userAchievements } from '../db/schema/scoreboard';
-import { eq, and, desc, asc, count, avg, sum, gte, lte } from 'drizzle-orm';
+import { eq, and, desc, asc, count, avg, sum, gte, lte, ilike, or } from 'drizzle-orm';
 
 export interface CreateUserScoreData {
   userId: string;
@@ -41,6 +41,25 @@ export interface UpdateAchievementData {
 export interface CreateUserAchievementData {
   userId: string;
   achievementId: string;
+}
+
+export interface ScoreboardQueryOptions {
+  page?: number;
+  pageSize?: number;
+  filters?: {
+    userId?: string;
+    communityId?: string;
+    courseId?: string;
+    totalPoints?: { min?: number; max?: number };
+    coursesCompleted?: { min?: number; max?: number };
+    quizzesPassed?: { min?: number; max?: number };
+    averageQuizScore?: { min?: number; max?: number };
+    streak?: { min?: number; max?: number };
+    lastActivityAt?: { start?: Date; end?: Date };
+    updatedAt?: { start?: Date; end?: Date };
+  };
+  search?: string;
+  sort?: Array<{ field: string; order: 'asc' | 'desc' }>;
 }
 
 // User Scores CRUD Operations
@@ -272,17 +291,19 @@ export class UserScoreService {
     }
   }
 
-  // Get Community Leaderboard
-  static async getCommunityLeaderboard(communityId: string, page = 1, pageSize = 50) {
+  // Get Community Leaderboard (with advanced filtering, sorting, and search)
+  static async getCommunityLeaderboard(communityId: string, options: ScoreboardQueryOptions = {}) {
+    const {
+      page = 1,
+      pageSize = 50,
+      filters = {},
+      search,
+      sort = [{ field: 'totalPoints', order: 'desc' }]
+    } = options;
+
     const offset = (page - 1) * pageSize;
 
-    // Get total count
-    const [{ count: totalCount }] = await db.select({ count: count() })
-      .from(userScores)
-      .where(eq(userScores.communityId, communityId));
-    const totalPages = Math.ceil(totalCount / pageSize);
-
-    const results = await db.select({
+    const query = db.select({
       id: userScores.id,
       userId: userScores.userId,
       totalPoints: userScores.totalPoints,
@@ -293,8 +314,178 @@ export class UserScoreService {
       lastActivityAt: userScores.lastActivityAt,
     })
       .from(userScores)
-      .where(eq(userScores.communityId, communityId))
-      .orderBy(desc(userScores.totalPoints), desc(userScores.lastActivityAt))
+      .where(eq(userScores.communityId, communityId));
+
+    const dynamicQuery = query.$dynamic();
+
+    // Apply filters
+    if (filters.userId) {
+      dynamicQuery.where(eq(userScores.userId, filters.userId));
+    }
+    if (filters.totalPoints) {
+      if (filters.totalPoints.min !== undefined) {
+        dynamicQuery.where(gte(userScores.totalPoints, filters.totalPoints.min));
+      }
+      if (filters.totalPoints.max !== undefined) {
+        dynamicQuery.where(lte(userScores.totalPoints, filters.totalPoints.max));
+      }
+    }
+    if (filters.coursesCompleted) {
+      if (filters.coursesCompleted.min !== undefined) {
+        dynamicQuery.where(gte(userScores.coursesCompleted, filters.coursesCompleted.min));
+      }
+      if (filters.coursesCompleted.max !== undefined) {
+        dynamicQuery.where(lte(userScores.coursesCompleted, filters.coursesCompleted.max));
+      }
+    }
+    if (filters.quizzesPassed) {
+      if (filters.quizzesPassed.min !== undefined) {
+        dynamicQuery.where(gte(userScores.quizzesPassed, filters.quizzesPassed.min));
+      }
+      if (filters.quizzesPassed.max !== undefined) {
+        dynamicQuery.where(lte(userScores.quizzesPassed, filters.quizzesPassed.max));
+      }
+    }
+    if (filters.averageQuizScore) {
+      if (filters.averageQuizScore.min !== undefined) {
+        dynamicQuery.where(gte(userScores.averageQuizScore, filters.averageQuizScore.min.toString()));
+      }
+      if (filters.averageQuizScore.max !== undefined) {
+        dynamicQuery.where(lte(userScores.averageQuizScore, filters.averageQuizScore.max.toString()));
+      }
+    }
+    if (filters.streak) {
+      if (filters.streak.min !== undefined) {
+        dynamicQuery.where(gte(userScores.streak, filters.streak.min));
+      }
+      if (filters.streak.max !== undefined) {
+        dynamicQuery.where(lte(userScores.streak, filters.streak.max));
+      }
+    }
+    if (filters.lastActivityAt) {
+      if (filters.lastActivityAt.start) {
+        dynamicQuery.where(gte(userScores.lastActivityAt, filters.lastActivityAt.start));
+      }
+      if (filters.lastActivityAt.end) {
+        dynamicQuery.where(lte(userScores.lastActivityAt, filters.lastActivityAt.end));
+      }
+    }
+    if (filters.updatedAt) {
+      if (filters.updatedAt.start) {
+        dynamicQuery.where(gte(userScores.updatedAt, filters.updatedAt.start));
+      }
+      if (filters.updatedAt.end) {
+        dynamicQuery.where(lte(userScores.updatedAt, filters.updatedAt.end));
+      }
+    }
+
+    // Apply search
+    if (search) {
+      // Search is not directly applicable to user scores, but we could search by user ID if needed
+    }
+
+    // Get total count
+    const countQuery = db.select({ count: count() })
+      .from(userScores)
+      .where(eq(userScores.communityId, communityId));
+    const dynamicCountQuery = countQuery.$dynamic();
+
+    // Apply same filters to count query
+    if (filters.userId) {
+      dynamicCountQuery.where(eq(userScores.userId, filters.userId));
+    }
+    if (filters.totalPoints) {
+      if (filters.totalPoints.min !== undefined) {
+        dynamicCountQuery.where(gte(userScores.totalPoints, filters.totalPoints.min));
+      }
+      if (filters.totalPoints.max !== undefined) {
+        dynamicCountQuery.where(lte(userScores.totalPoints, filters.totalPoints.max));
+      }
+    }
+    if (filters.coursesCompleted) {
+      if (filters.coursesCompleted.min !== undefined) {
+        dynamicCountQuery.where(gte(userScores.coursesCompleted, filters.coursesCompleted.min));
+      }
+      if (filters.coursesCompleted.max !== undefined) {
+        dynamicCountQuery.where(lte(userScores.coursesCompleted, filters.coursesCompleted.max));
+      }
+    }
+    if (filters.quizzesPassed) {
+      if (filters.quizzesPassed.min !== undefined) {
+        dynamicCountQuery.where(gte(userScores.quizzesPassed, filters.quizzesPassed.min));
+      }
+      if (filters.quizzesPassed.max !== undefined) {
+        dynamicCountQuery.where(lte(userScores.quizzesPassed, filters.quizzesPassed.max));
+      }
+    }
+    if (filters.averageQuizScore) {
+      if (filters.averageQuizScore.min !== undefined) {
+        dynamicCountQuery.where(gte(userScores.averageQuizScore, filters.averageQuizScore.min.toString()));
+      }
+      if (filters.averageQuizScore.max !== undefined) {
+        dynamicCountQuery.where(lte(userScores.averageQuizScore, filters.averageQuizScore.max.toString()));
+      }
+    }
+    if (filters.streak) {
+      if (filters.streak.min !== undefined) {
+        dynamicCountQuery.where(gte(userScores.streak, filters.streak.min));
+      }
+      if (filters.streak.max !== undefined) {
+        dynamicCountQuery.where(lte(userScores.streak, filters.streak.max));
+      }
+    }
+    if (filters.lastActivityAt) {
+      if (filters.lastActivityAt.start) {
+        dynamicCountQuery.where(gte(userScores.lastActivityAt, filters.lastActivityAt.start));
+      }
+      if (filters.lastActivityAt.end) {
+        dynamicCountQuery.where(lte(userScores.lastActivityAt, filters.lastActivityAt.end));
+      }
+    }
+    if (filters.updatedAt) {
+      if (filters.updatedAt.start) {
+        dynamicCountQuery.where(gte(userScores.updatedAt, filters.updatedAt.start));
+      }
+      if (filters.updatedAt.end) {
+        dynamicCountQuery.where(lte(userScores.updatedAt, filters.updatedAt.end));
+      }
+    }
+
+    const [{ count: totalCount }] = await dynamicCountQuery;
+    const totalPages = Math.ceil(totalCount / pageSize);
+
+    // Apply sorting
+    let orderedQuery = dynamicQuery;
+    for (const sortItem of sort) {
+      switch (sortItem.field) {
+        case 'totalPoints':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(userScores.totalPoints) : desc(userScores.totalPoints));
+          break;
+        case 'coursesCompleted':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(userScores.coursesCompleted) : desc(userScores.coursesCompleted));
+          break;
+        case 'quizzesPassed':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(userScores.quizzesPassed) : desc(userScores.quizzesPassed));
+          break;
+        case 'averageQuizScore':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(userScores.averageQuizScore) : desc(userScores.averageQuizScore));
+          break;
+        case 'streak':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(userScores.streak) : desc(userScores.streak));
+          break;
+        case 'createdAt':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(userScores.lastActivityAt) : desc(userScores.lastActivityAt));
+          break;
+        case 'updatedAt':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(userScores.updatedAt) : desc(userScores.updatedAt));
+          break;
+        case 'lastActivityAt':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(userScores.lastActivityAt) : desc(userScores.lastActivityAt));
+          break;
+      }
+    }
+
+    const results = await orderedQuery
       .limit(pageSize)
       .offset(offset);
 
@@ -305,17 +496,19 @@ export class UserScoreService {
     };
   }
 
-  // Get Course Leaderboard
-  static async getCourseLeaderboard(courseId: string, page = 1, pageSize = 50) {
+  // Get Course Leaderboard (with advanced filtering, sorting, and search)
+  static async getCourseLeaderboard(courseId: string, options: ScoreboardQueryOptions = {}) {
+    const {
+      page = 1,
+      pageSize = 50,
+      filters = {},
+      search,
+      sort = [{ field: 'totalPoints', order: 'desc' }]
+    } = options;
+
     const offset = (page - 1) * pageSize;
 
-    // Get total count
-    const [{ count: totalCount }] = await db.select({ count: count() })
-      .from(userScores)
-      .where(eq(userScores.courseId, courseId));
-    const totalPages = Math.ceil(totalCount / pageSize);
-
-    const results = await db.select({
+    const query = db.select({
       id: userScores.id,
       userId: userScores.userId,
       totalPoints: userScores.totalPoints,
@@ -324,8 +517,140 @@ export class UserScoreService {
       lastActivityAt: userScores.lastActivityAt,
     })
       .from(userScores)
-      .where(eq(userScores.courseId, courseId))
-      .orderBy(desc(userScores.totalPoints), desc(userScores.averageQuizScore))
+      .where(eq(userScores.courseId, courseId));
+
+    const dynamicQuery = query.$dynamic();
+
+    // Apply filters
+    if (filters.userId) {
+      dynamicQuery.where(eq(userScores.userId, filters.userId));
+    }
+    if (filters.totalPoints) {
+      if (filters.totalPoints.min !== undefined) {
+        dynamicQuery.where(gte(userScores.totalPoints, filters.totalPoints.min));
+      }
+      if (filters.totalPoints.max !== undefined) {
+        dynamicQuery.where(lte(userScores.totalPoints, filters.totalPoints.max));
+      }
+    }
+    if (filters.quizzesPassed) {
+      if (filters.quizzesPassed.min !== undefined) {
+        dynamicQuery.where(gte(userScores.quizzesPassed, filters.quizzesPassed.min));
+      }
+      if (filters.quizzesPassed.max !== undefined) {
+        dynamicQuery.where(lte(userScores.quizzesPassed, filters.quizzesPassed.max));
+      }
+    }
+    if (filters.averageQuizScore) {
+      if (filters.averageQuizScore.min !== undefined) {
+        dynamicQuery.where(gte(userScores.averageQuizScore, filters.averageQuizScore.min.toString()));
+      }
+      if (filters.averageQuizScore.max !== undefined) {
+        dynamicQuery.where(lte(userScores.averageQuizScore, filters.averageQuizScore.max.toString()));
+      }
+    }
+    if (filters.lastActivityAt) {
+      if (filters.lastActivityAt.start) {
+        dynamicQuery.where(gte(userScores.lastActivityAt, filters.lastActivityAt.start));
+      }
+      if (filters.lastActivityAt.end) {
+        dynamicQuery.where(lte(userScores.lastActivityAt, filters.lastActivityAt.end));
+      }
+    }
+    if (filters.updatedAt) {
+      if (filters.updatedAt.start) {
+        dynamicQuery.where(gte(userScores.updatedAt, filters.updatedAt.start));
+      }
+      if (filters.updatedAt.end) {
+        dynamicQuery.where(lte(userScores.updatedAt, filters.updatedAt.end));
+      }
+    }
+
+    // Apply search
+    if (search) {
+      // Search is not directly applicable to user scores, but we could search by user ID if needed
+    }
+
+    // Get total count
+    const countQuery = db.select({ count: count() })
+      .from(userScores)
+      .where(eq(userScores.courseId, courseId));
+    const dynamicCountQuery = countQuery.$dynamic();
+
+    // Apply same filters to count query
+    if (filters.userId) {
+      dynamicCountQuery.where(eq(userScores.userId, filters.userId));
+    }
+    if (filters.totalPoints) {
+      if (filters.totalPoints.min !== undefined) {
+        dynamicCountQuery.where(gte(userScores.totalPoints, filters.totalPoints.min));
+      }
+      if (filters.totalPoints.max !== undefined) {
+        dynamicCountQuery.where(lte(userScores.totalPoints, filters.totalPoints.max));
+      }
+    }
+    if (filters.quizzesPassed) {
+      if (filters.quizzesPassed.min !== undefined) {
+        dynamicCountQuery.where(gte(userScores.quizzesPassed, filters.quizzesPassed.min));
+      }
+      if (filters.quizzesPassed.max !== undefined) {
+        dynamicCountQuery.where(lte(userScores.quizzesPassed, filters.quizzesPassed.max));
+      }
+    }
+    if (filters.averageQuizScore) {
+      if (filters.averageQuizScore.min !== undefined) {
+        dynamicCountQuery.where(gte(userScores.averageQuizScore, filters.averageQuizScore.min.toString()));
+      }
+      if (filters.averageQuizScore.max !== undefined) {
+        dynamicCountQuery.where(lte(userScores.averageQuizScore, filters.averageQuizScore.max.toString()));
+      }
+    }
+    if (filters.lastActivityAt) {
+      if (filters.lastActivityAt.start) {
+        dynamicCountQuery.where(gte(userScores.lastActivityAt, filters.lastActivityAt.start));
+      }
+      if (filters.lastActivityAt.end) {
+        dynamicCountQuery.where(lte(userScores.lastActivityAt, filters.lastActivityAt.end));
+      }
+    }
+    if (filters.updatedAt) {
+      if (filters.updatedAt.start) {
+        dynamicCountQuery.where(gte(userScores.updatedAt, filters.updatedAt.start));
+      }
+      if (filters.updatedAt.end) {
+        dynamicCountQuery.where(lte(userScores.updatedAt, filters.updatedAt.end));
+      }
+    }
+
+    const [{ count: totalCount }] = await dynamicCountQuery;
+    const totalPages = Math.ceil(totalCount / pageSize);
+
+    // Apply sorting
+    let orderedQuery = dynamicQuery;
+    for (const sortItem of sort) {
+      switch (sortItem.field) {
+        case 'totalPoints':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(userScores.totalPoints) : desc(userScores.totalPoints));
+          break;
+        case 'quizzesPassed':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(userScores.quizzesPassed) : desc(userScores.quizzesPassed));
+          break;
+        case 'averageQuizScore':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(userScores.averageQuizScore) : desc(userScores.averageQuizScore));
+          break;
+        case 'createdAt':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(userScores.lastActivityAt) : desc(userScores.lastActivityAt));
+          break;
+        case 'updatedAt':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(userScores.updatedAt) : desc(userScores.updatedAt));
+          break;
+        case 'lastActivityAt':
+          orderedQuery = orderedQuery.orderBy(sortItem.order === 'asc' ? asc(userScores.lastActivityAt) : desc(userScores.lastActivityAt));
+          break;
+      }
+    }
+
+    const results = await orderedQuery
       .limit(pageSize)
       .offset(offset);
 

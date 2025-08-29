@@ -31,13 +31,17 @@ jest.mock('../db', () => ({
   and: jest.fn(),
   desc: jest.fn(),
   asc: jest.fn(),
-  count: jest.fn(),
+  count: jest.fn(() => ({ count: 10 })),
+  ilike: jest.fn(),
+  or: jest.fn(),
+  gte: jest.fn(),
+  lte: jest.fn(),
 }));
 
 describe('Pagination with Count', () => {
   describe('CourseService', () => {
     it('should return courses with totalCount', async () => {
-      const result = await CourseService.getAllCourses(1, 10);
+      const result = await CourseService.getAllCourses({ page: 1, pageSize: 10 });
       expect(result).toHaveProperty('courses');
       expect(result).toHaveProperty('totalCount');
     });
@@ -45,7 +49,7 @@ describe('Pagination with Count', () => {
 
   describe('CommunityService', () => {
     it('should return communities with totalCount', async () => {
-      const result = await CommunityService.getAllCommunities(1, 10);
+      const result = await CommunityService.getAllCommunities({ page: 1, pageSize: 10 });
       expect(result).toHaveProperty('communities');
       expect(result).toHaveProperty('totalCount');
     });
@@ -53,7 +57,7 @@ describe('Pagination with Count', () => {
 
   describe('EnrollmentService', () => {
     it('should return enrollments with totalCount', async () => {
-      const result = await EnrollmentService.getUserEnrollments('user1', 1, 10);
+      const result = await EnrollmentService.getUserEnrollments('user1', { page: 1, pageSize: 10 });
       expect(result).toHaveProperty('enrollments');
       expect(result).toHaveProperty('totalCount');
     });
@@ -61,7 +65,7 @@ describe('Pagination with Count', () => {
 
   describe('UserScoreService', () => {
     it('should return leaderboard with totalCount', async () => {
-      const result = await UserScoreService.getCommunityLeaderboard('community1', 1, 10);
+      const result = await UserScoreService.getCommunityLeaderboard('community1', { page: 1, pageSize: 10 });
       expect(result).toHaveProperty('leaderboard');
       expect(result).toHaveProperty('totalCount');
     });

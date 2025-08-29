@@ -16,6 +16,9 @@ import {
   UpdateCourseMaterialRequest,
   CreateQuizRequest,
   UpdateQuizRequest,
+  Enrollment,
+  Upload,
+  LeaderboardEntry,
 } from './types';
 
 interface ApiClientConfig {
@@ -78,8 +81,25 @@ export class ApiClient {
   }
 
   // Communities CRUD
-  async getCommunities(page = 1, limit = 20): Promise<PaginatedResponse<Community>> {
-    return this.request<PaginatedResponse<Community>>(`/communities?page=${page}&limit=${limit}`);
+  async getCommunities(
+    page = 1, 
+    limit = 20, 
+    filters: Record<string, any> = {},
+    sort: string[] = []
+  ): Promise<PaginatedResponse<Community>> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: limit.toString(),
+      ...Object.fromEntries(
+        Object.entries(filters).filter(([_, value]) => value !== undefined && value !== null && value !== '')
+      )
+    });
+    
+    if (sort.length > 0) {
+      params.set('sort', sort.join(','));
+    }
+    
+    return this.request<PaginatedResponse<Community>>(`/communities?${params}`);
   }
 
   async getCommunity(id: string): Promise<ApiResponse<Community>> {
@@ -107,12 +127,24 @@ export class ApiClient {
   }
 
   // Courses CRUD
-  async getCourses(page = 1, limit = 20, communityId?: string): Promise<PaginatedResponse<Course>> {
+  async getCourses(
+    page = 1, 
+    limit = 20, 
+    filters: Record<string, any> = {},
+    sort: string[] = []
+  ): Promise<PaginatedResponse<Course>> {
     const params = new URLSearchParams({
       page: page.toString(),
-      limit: limit.toString(),
-      ...(communityId && { communityId }),
+      pageSize: limit.toString(),
+      ...Object.fromEntries(
+        Object.entries(filters).filter(([_, value]) => value !== undefined && value !== null && value !== '')
+      )
     });
+    
+    if (sort.length > 0) {
+      params.set('sort', sort.join(','));
+    }
+    
     return this.request<PaginatedResponse<Course>>(`/courses?${params}`);
   }
 
@@ -146,65 +178,94 @@ export class ApiClient {
   }
 
   async getCourseModule(id: string): Promise<ApiResponse<CourseModule>> {
-    return this.request<ApiResponse<CourseModule>>(`/modules/${id}`);
+    return this.request<ApiResponse<CourseModule>>(`/courses/modules/${id}`);
   }
 
   async createCourseModule(data: CreateCourseModuleRequest): Promise<ApiResponse<CourseModule>> {
-    return this.request<ApiResponse<CourseModule>>('/modules', {
+    return this.request<ApiResponse<CourseModule>>(`/courses/${data.courseId}/modules`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
   async updateCourseModule(data: UpdateCourseModuleRequest): Promise<ApiResponse<CourseModule>> {
-    return this.request<ApiResponse<CourseModule>>(`/modules/${data.id}`, {
+    return this.request<ApiResponse<CourseModule>>(`/courses/modules/${data.id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   }
 
   async deleteCourseModule(id: string): Promise<ApiResponse<void>> {
-    return this.request<ApiResponse<void>>(`/modules/${id}`, {
+    return this.request<ApiResponse<void>>(`/courses/modules/${id}`, {
       method: 'DELETE',
     });
   }
 
-  // Course Materials CRUD
-  async getCourseMaterials(moduleId: string): Promise<ApiResponse<CourseMaterial[]>> {
-    return this.request<ApiResponse<CourseMaterial[]>>(`/modules/${moduleId}/materials`);
+  // Enrollments CRUD
+  async getEnrollments(
+    page = 1, 
+    limit = 20, 
+    filters: Record<string, any> = {},
+    sort: string[] = []
+  ): Promise<PaginatedResponse<Enrollment>> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: limit.toString(),
+      ...Object.fromEntries(
+        Object.entries(filters).filter(([_, value]) => value !== undefined && value !== null && value !== '')
+      )
+    });
+    
+    if (sort.length > 0) {
+      params.set('sort', sort.join(','));
+    }
+    
+    return this.request<PaginatedResponse<Enrollment>>(`/enrollments?${params}`);
   }
 
-  async getCourseMaterial(id: string): Promise<ApiResponse<CourseMaterial>> {
-    return this.request<ApiResponse<CourseMaterial>>(`/materials/${id}`);
+  async getEnrollment(id: string): Promise<ApiResponse<Enrollment>> {
+    return this.request<ApiResponse<Enrollment>>(`/enrollments/${id}`);
   }
 
-  async createCourseMaterial(data: CreateCourseMaterialRequest): Promise<ApiResponse<CourseMaterial>> {
-    return this.request<ApiResponse<CourseMaterial>>('/materials', {
+  async createEnrollment(data: any): Promise<ApiResponse<Enrollment>> {
+    return this.request<ApiResponse<Enrollment>>('/enrollments', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  async updateCourseMaterial(data: UpdateCourseMaterialRequest): Promise<ApiResponse<CourseMaterial>> {
-    return this.request<ApiResponse<CourseMaterial>>(`/materials/${data.id}`, {
+  async updateEnrollment(data: any): Promise<ApiResponse<Enrollment>> {
+    return this.request<ApiResponse<Enrollment>>(`/enrollments/${data.id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   }
 
-  async deleteCourseMaterial(id: string): Promise<ApiResponse<void>> {
-    return this.request<ApiResponse<void>>(`/materials/${id}`, {
+  async deleteEnrollment(id: string): Promise<ApiResponse<void>> {
+    return this.request<ApiResponse<void>>(`/enrollments/${id}`, {
       method: 'DELETE',
     });
   }
 
   // Quizzes CRUD
-  async getQuizzes(page = 1, limit = 20, courseId?: string): Promise<PaginatedResponse<Quiz>> {
+  async getQuizzes(
+    page = 1, 
+    limit = 20, 
+    filters: Record<string, any> = {},
+    sort: string[] = []
+  ): Promise<PaginatedResponse<Quiz>> {
     const params = new URLSearchParams({
       page: page.toString(),
-      limit: limit.toString(),
-      ...(courseId && { courseId }),
+      pageSize: limit.toString(),
+      ...Object.fromEntries(
+        Object.entries(filters).filter(([_, value]) => value !== undefined && value !== null && value !== '')
+      )
     });
+    
+    if (sort.length > 0) {
+      params.set('sort', sort.join(','));
+    }
+    
     return this.request<PaginatedResponse<Quiz>>(`/quizzes?${params}`);
   }
 
@@ -230,6 +291,126 @@ export class ApiClient {
     return this.request<ApiResponse<void>>(`/quizzes/${id}`, {
       method: 'DELETE',
     });
+  }
+
+  // Course Materials CRUD
+  async getCourseMaterials(moduleId: string): Promise<ApiResponse<CourseMaterial[]>> {
+    return this.request<ApiResponse<CourseMaterial[]>>(`/courses/modules/${moduleId}/materials`);
+  }
+
+  async getCourseMaterial(id: string): Promise<ApiResponse<CourseMaterial>> {
+    return this.request<ApiResponse<CourseMaterial>>(`/courses/materials/${id}`);
+  }
+
+  async createCourseMaterial(data: CreateCourseMaterialRequest): Promise<ApiResponse<CourseMaterial>> {
+    return this.request<ApiResponse<CourseMaterial>>(`/courses/modules/${data.moduleId}/materials`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateCourseMaterial(data: UpdateCourseMaterialRequest): Promise<ApiResponse<CourseMaterial>> {
+    return this.request<ApiResponse<CourseMaterial>>(`/courses/materials/${data.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteCourseMaterial(id: string): Promise<ApiResponse<void>> {
+    return this.request<ApiResponse<void>>(`/courses/materials/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Enrollments CRUD
+  async getUploads(
+    page = 1, 
+    limit = 20, 
+    filters: Record<string, any> = {},
+    sort: string[] = []
+  ): Promise<PaginatedResponse<Upload>> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: limit.toString(),
+      ...Object.fromEntries(
+        Object.entries(filters).filter(([_, value]) => value !== undefined && value !== null && value !== '')
+      )
+    });
+    
+    if (sort.length > 0) {
+      params.set('sort', sort.join(','));
+    }
+    
+    return this.request<PaginatedResponse<Upload>>(`/uploads?${params}`);
+  }
+
+  async getUpload(id: string): Promise<ApiResponse<Upload>> {
+    return this.request<ApiResponse<Upload>>(`/uploads/${id}`);
+  }
+
+  async createUpload(data: any): Promise<ApiResponse<Upload>> {
+    return this.request<ApiResponse<Upload>>('/uploads', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateUpload(data: any): Promise<ApiResponse<Upload>> {
+    return this.request<ApiResponse<Upload>>(`/uploads/${data.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteUpload(id: string): Promise<ApiResponse<void>> {
+    return this.request<ApiResponse<void>>(`/uploads/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Leaderboard CRUD
+  async getCommunityLeaderboard(
+    communityId: string,
+    page = 1, 
+    limit = 20, 
+    filters: Record<string, any> = {},
+    sort: string[] = []
+  ): Promise<PaginatedResponse<LeaderboardEntry>> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: limit.toString(),
+      ...Object.fromEntries(
+        Object.entries(filters).filter(([_, value]) => value !== undefined && value !== null && value !== '')
+      )
+    });
+    
+    if (sort.length > 0) {
+      params.set('sort', sort.join(','));
+    }
+    
+    return this.request<PaginatedResponse<LeaderboardEntry>>(`/scoreboard/communities/${communityId}/leaderboard?${params}`);
+  }
+
+  async getCourseLeaderboard(
+    courseId: string,
+    page = 1, 
+    limit = 20, 
+    filters: Record<string, any> = {},
+    sort: string[] = []
+  ): Promise<PaginatedResponse<LeaderboardEntry>> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: limit.toString(),
+      ...Object.fromEntries(
+        Object.entries(filters).filter(([_, value]) => value !== undefined && value !== null && value !== '')
+      )
+    });
+    
+    if (sort.length > 0) {
+      params.set('sort', sort.join(','));
+    }
+    
+    return this.request<PaginatedResponse<LeaderboardEntry>>(`/scoreboard/courses/${courseId}/leaderboard?${params}`);
   }
 }
 
