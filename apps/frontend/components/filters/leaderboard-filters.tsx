@@ -26,15 +26,13 @@ interface LeaderboardFiltersProps {
   onSortChange: (sort: string[]) => void;
   currentFilters: Record<string, any>;
   currentSort: string[];
-  type: 'community' | 'course';
 }
 
 export function LeaderboardFilters({
   onFiltersChange,
   onSortChange,
   currentFilters,
-  currentSort,
-  type
+  currentSort
 }: LeaderboardFiltersProps) {
   const [open, setOpen] = useState(false);
   const [filters, setFilters] = useState(currentFilters);
@@ -71,51 +69,6 @@ export function LeaderboardFilters({
     setSort(prev => prev.filter(s => !s.includes(field)));
   };
 
-  const commonFilters = [
-    { field: 'userId', label: 'User ID', type: 'text' },
-    { field: 'totalPointsMin', label: 'Min Total Points', type: 'number' },
-    { field: 'totalPointsMax', label: 'Max Total Points', type: 'number' },
-  ];
-
-  const communitySpecificFilters = [
-    { field: 'coursesCompletedMin', label: 'Min Courses Completed', type: 'number' },
-    { field: 'coursesCompletedMax', label: 'Max Courses Completed', type: 'number' },
-    { field: 'quizzesPassedMin', label: 'Min Quizzes Passed', type: 'number' },
-    { field: 'quizzesPassedMax', label: 'Max Quizzes Passed', type: 'number' },
-    { field: 'averageQuizScoreMin', label: 'Min Avg Quiz Score', type: 'number' },
-    { field: 'averageQuizScoreMax', label: 'Max Avg Quiz Score', type: 'number' },
-    { field: 'streakMin', label: 'Min Streak', type: 'number' },
-    { field: 'streakMax', label: 'Max Streak', type: 'number' },
-  ];
-
-  const courseSpecificFilters = [
-    { field: 'quizzesPassedMin', label: 'Min Quizzes Passed', type: 'number' },
-    { field: 'quizzesPassedMax', label: 'Max Quizzes Passed', type: 'number' },
-    { field: 'averageQuizScoreMin', label: 'Min Avg Quiz Score', type: 'number' },
-    { field: 'averageQuizScoreMax', label: 'Max Avg Quiz Score', type: 'number' },
-  ];
-
-  const allFilters = type === 'community' 
-    ? [...commonFilters, ...communitySpecificFilters] 
-    : [...commonFilters, ...courseSpecificFilters];
-
-  const commonSortOptions = [
-    { field: 'totalPoints', label: 'Total Points' },
-    { field: 'quizzesPassed', label: 'Quizzes Passed' },
-    { field: 'averageQuizScore', label: 'Average Quiz Score' },
-    { field: 'lastActivityAt', label: 'Last Activity Date' },
-  ];
-
-  const communitySortOptions = [
-    ...commonSortOptions,
-    { field: 'coursesCompleted', label: 'Courses Completed' },
-    { field: 'streak', label: 'Current Streak' },
-  ];
-
-  const courseSortOptions = commonSortOptions;
-
-  const allSortOptions = type === 'community' ? communitySortOptions : courseSortOptions;
-
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
@@ -126,21 +79,21 @@ export function LeaderboardFilters({
       </SheetTrigger>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>{type === 'community' ? 'Community' : 'Course'} Leaderboard Filters</SheetTitle>
+          <SheetTitle>Leaderboard Filters</SheetTitle>
           <SheetDescription>
             Filter and sort leaderboard entries based on various criteria
           </SheetDescription>
         </SheetHeader>
         
         <div className="space-y-6 py-6">
-          {/* User ID */}
+          {/* Search */}
           <div className="space-y-2">
-            <Label htmlFor="userId">User ID</Label>
+            <Label htmlFor="search">Search</Label>
             <Input
-              id="userId"
-              placeholder="User ID"
-              value={filters.userId || ''}
-              onChange={(e) => updateFilter('userId', e.target.value)}
+              id="search"
+              placeholder="Search by user name"
+              value={filters.search || ''}
+              onChange={(e) => updateFilter('search', e.target.value)}
             />
           </div>
 
@@ -150,70 +103,47 @@ export function LeaderboardFilters({
             <div className="flex items-center space-x-2">
               <Input
                 type="number"
+                min="0"
                 placeholder="Min"
-                value={filters.totalPointsMin || ''}
-                onChange={(e) => updateFilter('totalPointsMin', e.target.value ? parseInt(e.target.value) : undefined)}
+                value={filters.pointsMin || ''}
+                onChange={(e) => updateFilter('pointsMin', e.target.value ? parseInt(e.target.value) : undefined)}
                 className="w-24"
               />
               <span className="text-muted-foreground">to</span>
               <Input
                 type="number"
+                min="0"
                 placeholder="Max"
-                value={filters.totalPointsMax || ''}
-                onChange={(e) => updateFilter('totalPointsMax', e.target.value ? parseInt(e.target.value) : undefined)}
+                value={filters.pointsMax || ''}
+                onChange={(e) => updateFilter('pointsMax', e.target.value ? parseInt(e.target.value) : undefined)}
                 className="w-24"
               />
             </div>
           </div>
 
-          {/* Community-specific filters */}
-          {type === 'community' && (
-            <>
-              {/* Courses Completed Range */}
-              <div className="space-y-2">
-                <Label>Courses Completed</Label>
-                <div className="flex items-center space-x-2">
-                  <Input
-                    type="number"
-                    placeholder="Min"
-                    value={filters.coursesCompletedMin || ''}
-                    onChange={(e) => updateFilter('coursesCompletedMin', e.target.value ? parseInt(e.target.value) : undefined)}
-                    className="w-24"
-                  />
-                  <span className="text-muted-foreground">to</span>
-                  <Input
-                    type="number"
-                    placeholder="Max"
-                    value={filters.coursesCompletedMax || ''}
-                    onChange={(e) => updateFilter('coursesCompletedMax', e.target.value ? parseInt(e.target.value) : undefined)}
-                    className="w-24"
-                  />
-                </div>
-              </div>
-
-              {/* Streak Range */}
-              <div className="space-y-2">
-                <Label>Streak</Label>
-                <div className="flex items-center space-x-2">
-                  <Input
-                    type="number"
-                    placeholder="Min"
-                    value={filters.streakMin || ''}
-                    onChange={(e) => updateFilter('streakMin', e.target.value ? parseInt(e.target.value) : undefined)}
-                    className="w-24"
-                  />
-                  <span className="text-muted-foreground">to</span>
-                  <Input
-                    type="number"
-                    placeholder="Max"
-                    value={filters.streakMax || ''}
-                    onChange={(e) => updateFilter('streakMax', e.target.value ? parseInt(e.target.value) : undefined)}
-                    className="w-24"
-                  />
-                </div>
-              </div>
-            </>
-          )}
+          {/* Courses Completed Range (Community Leaderboard Only) */}
+          <div className="space-y-2">
+            <Label>Courses Completed</Label>
+            <div className="flex items-center space-x-2">
+              <Input
+                type="number"
+                min="0"
+                placeholder="Min"
+                value={filters.coursesCompletedMin || ''}
+                onChange={(e) => updateFilter('coursesCompletedMin', e.target.value ? parseInt(e.target.value) : undefined)}
+                className="w-24"
+              />
+              <span className="text-muted-foreground">to</span>
+              <Input
+                type="number"
+                min="0"
+                placeholder="Max"
+                value={filters.coursesCompletedMax || ''}
+                onChange={(e) => updateFilter('coursesCompletedMax', e.target.value ? parseInt(e.target.value) : undefined)}
+                className="w-24"
+              />
+            </div>
+          </div>
 
           {/* Quizzes Passed Range */}
           <div className="space-y-2">
@@ -221,6 +151,7 @@ export function LeaderboardFilters({
             <div className="flex items-center space-x-2">
               <Input
                 type="number"
+                min="0"
                 placeholder="Min"
                 value={filters.quizzesPassedMin || ''}
                 onChange={(e) => updateFilter('quizzesPassedMin', e.target.value ? parseInt(e.target.value) : undefined)}
@@ -229,6 +160,7 @@ export function LeaderboardFilters({
               <span className="text-muted-foreground">to</span>
               <Input
                 type="number"
+                min="0"
                 placeholder="Max"
                 value={filters.quizzesPassedMax || ''}
                 onChange={(e) => updateFilter('quizzesPassedMax', e.target.value ? parseInt(e.target.value) : undefined)}
@@ -239,23 +171,76 @@ export function LeaderboardFilters({
 
           {/* Average Quiz Score Range */}
           <div className="space-y-2">
-            <Label>Average Quiz Score</Label>
+            <Label>Average Quiz Score (%)</Label>
             <div className="flex items-center space-x-2">
               <Input
                 type="number"
+                min="0"
+                max="100"
                 placeholder="Min"
                 value={filters.averageQuizScoreMin || ''}
-                onChange={(e) => updateFilter('averageQuizScoreMin', e.target.value ? parseFloat(e.target.value) : undefined)}
+                onChange={(e) => updateFilter('averageQuizScoreMin', e.target.value ? parseInt(e.target.value) : undefined)}
                 className="w-24"
               />
               <span className="text-muted-foreground">to</span>
               <Input
                 type="number"
+                min="0"
+                max="100"
                 placeholder="Max"
                 value={filters.averageQuizScoreMax || ''}
-                onChange={(e) => updateFilter('averageQuizScoreMax', e.target.value ? parseFloat(e.target.value) : undefined)}
+                onChange={(e) => updateFilter('averageQuizScoreMax', e.target.value ? parseInt(e.target.value) : undefined)}
                 className="w-24"
               />
+            </div>
+          </div>
+
+          {/* Streak Range (Community Leaderboard Only) */}
+          <div className="space-y-2">
+            <Label>Streak</Label>
+            <div className="flex items-center space-x-2">
+              <Input
+                type="number"
+                min="0"
+                placeholder="Min"
+                value={filters.streakMin || ''}
+                onChange={(e) => updateFilter('streakMin', e.target.value ? parseInt(e.target.value) : undefined)}
+                className="w-24"
+              />
+              <span className="text-muted-foreground">to</span>
+              <Input
+                type="number"
+                min="0"
+                placeholder="Max"
+                value={filters.streakMax || ''}
+                onChange={(e) => updateFilter('streakMax', e.target.value ? parseInt(e.target.value) : undefined)}
+                className="w-24"
+              />
+            </div>
+          </div>
+
+          {/* Date Range (Last Activity) */}
+          <div className="space-y-2">
+            <Label>Last Activity Date Range</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label htmlFor="activeAfter" className="text-xs">Active After</Label>
+                <Input
+                  id="activeAfter"
+                  type="date"
+                  value={filters.activeAfter || ''}
+                  onChange={(e) => updateFilter('activeAfter', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="activeBefore" className="text-xs">Active Before</Label>
+                <Input
+                  id="activeBefore"
+                  type="date"
+                  value={filters.activeBefore || ''}
+                  onChange={(e) => updateFilter('activeBefore', e.target.value)}
+                />
+              </div>
             </div>
           </div>
 
@@ -277,7 +262,15 @@ export function LeaderboardFilters({
             </div>
             
             <div className="space-y-3">
-              {allSortOptions.map(({ field, label }) => (
+              {[
+                { field: 'userName', label: 'User Name' },
+                { field: 'totalPoints', label: 'Total Points' },
+                { field: 'coursesCompleted', label: 'Courses Completed' },
+                { field: 'quizzesPassed', label: 'Quizzes Passed' },
+                { field: 'averageQuizScore', label: 'Average Quiz Score' },
+                { field: 'streak', label: 'Streak' },
+                { field: 'lastActivityAt', label: 'Last Activity' },
+              ].map(({ field, label }) => (
                 <div key={field} className="flex items-center justify-between">
                   <span className="text-sm">{label}</span>
                   <div className="flex space-x-1">

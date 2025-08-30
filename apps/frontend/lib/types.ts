@@ -181,12 +181,15 @@ export interface CreateCommunityRequest {
   name: string;
   slug: string;
   description?: string;
+  domain?: string;
   privacy?: 'public' | 'private' | 'invite_only';
   settings?: Record<string, any>;
 }
 
 export interface UpdateCommunityRequest extends Partial<CreateCommunityRequest> {
   id: string;
+  avatar?: string;
+  avatarUploadId?: string;
 }
 
 export interface CreateCourseRequest {

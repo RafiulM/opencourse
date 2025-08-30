@@ -231,6 +231,31 @@ export function CourseFilters({
             />
           </div>
 
+          {/* Date Range */}
+          <div className="space-y-2">
+            <Label>Date Range</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label htmlFor="createdAfter" className="text-xs">Created After</Label>
+                <Input
+                  id="createdAfter"
+                  type="date"
+                  value={filters.createdAfter || ''}
+                  onChange={(e) => updateFilter('createdAfter', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="createdBefore" className="text-xs">Created Before</Label>
+                <Input
+                  id="createdBefore"
+                  type="date"
+                  value={filters.createdBefore || ''}
+                  onChange={(e) => updateFilter('createdBefore', e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Sorting Options */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">

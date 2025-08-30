@@ -28,7 +28,7 @@ export default function CommunityPage() {
   const communityId = params.id as string;
   
   const { data: communityData, isLoading: communityLoading } = useCommunity(communityId);
-  const { data: coursesData, isLoading: coursesLoading } = useCourses(1, 100, communityId);
+  const { data: coursesData, isLoading: coursesLoading } = useCourses(1, 100, { communityId });
   
   const community = communityData?.data;
   const courses = coursesData?.data || [];

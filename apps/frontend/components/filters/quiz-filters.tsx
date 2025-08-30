@@ -21,19 +21,19 @@ import {
 import { Label } from '@/components/ui/label';
 import { Filter, X } from 'lucide-react';
 
-interface EnrollmentFiltersProps {
+interface QuizFiltersProps {
   onFiltersChange: (filters: Record<string, any>) => void;
   onSortChange: (sort: string[]) => void;
   currentFilters: Record<string, any>;
   currentSort: string[];
 }
 
-export function EnrollmentFilters({
+export function QuizFilters({
   onFiltersChange,
   onSortChange,
   currentFilters,
   currentSort
-}: EnrollmentFiltersProps) {
+}: QuizFiltersProps) {
   const [open, setOpen] = useState(false);
   const [filters, setFilters] = useState(currentFilters);
   const [sort, setSort] = useState(currentSort);
@@ -79,9 +79,9 @@ export function EnrollmentFilters({
       </SheetTrigger>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Enrollment Filters</SheetTitle>
+          <SheetTitle>Quiz Filters</SheetTitle>
           <SheetDescription>
-            Filter and sort enrollments based on various criteria
+            Filter and sort quizzes based on various criteria
           </SheetDescription>
         </SheetHeader>
         
@@ -91,41 +91,83 @@ export function EnrollmentFilters({
             <Label htmlFor="search">Search</Label>
             <Input
               id="search"
-              placeholder="Search by course title"
+              placeholder="Search by title or description"
               value={filters.search || ''}
               onChange={(e) => updateFilter('search', e.target.value)}
             />
           </div>
 
-          {/* Status */}
+          {/* Published Status */}
           <div className="space-y-2">
-            <Label>Status</Label>
+            <Label>Published Status</Label>
             <Select 
-              value={filters.status || ''} 
-              onValueChange={(value) => updateFilter('status', value)}
+              value={filters.isPublished || ''} 
+              onValueChange={(value) => updateFilter('isPublished', value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="enrolled">Enrolled</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="dropped">Dropped</SelectItem>
+                <SelectItem value="true">Published</SelectItem>
+                <SelectItem value="false">Draft</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {/* Progress Range */}
+          {/* Type */}
           <div className="space-y-2">
-            <Label>Progress (%)</Label>
+            <Label>Type</Label>
+            <Select 
+              value={filters.type || ''} 
+              onValueChange={(value) => updateFilter('type', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="multiple_choice">Multiple Choice</SelectItem>
+                <SelectItem value="true_false">True/False</SelectItem>
+                <SelectItem value="essay">Essay</SelectItem>
+                <SelectItem value="fill_blank">Fill in the Blank</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Time Limit Range (minutes) */}
+          <div className="space-y-2">
+            <Label>Time Limit (minutes)</Label>
+            <div className="flex items-center space-x-2">
+              <Input
+                type="number"
+                min="0"
+                placeholder="Min"
+                value={filters.timeLimitMin || ''}
+                onChange={(e) => updateFilter('timeLimitMin', e.target.value ? parseInt(e.target.value) : undefined)}
+                className="w-24"
+              />
+              <span className="text-muted-foreground">to</span>
+              <Input
+                type="number"
+                min="0"
+                placeholder="Max"
+                value={filters.timeLimitMax || ''}
+                onChange={(e) => updateFilter('timeLimitMax', e.target.value ? parseInt(e.target.value) : undefined)}
+                className="w-24"
+              />
+            </div>
+          </div>
+
+          {/* Passing Score Range */}
+          <div className="space-y-2">
+            <Label>Passing Score (%)</Label>
             <div className="flex items-center space-x-2">
               <Input
                 type="number"
                 min="0"
                 max="100"
                 placeholder="Min"
-                value={filters.progressMin || ''}
-                onChange={(e) => updateFilter('progressMin', e.target.value ? parseInt(e.target.value) : undefined)}
+                value={filters.passingScoreMin || ''}
+                onChange={(e) => updateFilter('passingScoreMin', e.target.value ? parseInt(e.target.value) : undefined)}
                 className="w-24"
               />
               <span className="text-muted-foreground">to</span>
@@ -134,35 +176,34 @@ export function EnrollmentFilters({
                 min="0"
                 max="100"
                 placeholder="Max"
-                value={filters.progressMax || ''}
-                onChange={(e) => updateFilter('progressMax', e.target.value ? parseInt(e.target.value) : undefined)}
+                value={filters.passingScoreMax || ''}
+                onChange={(e) => updateFilter('passingScoreMax', e.target.value ? parseInt(e.target.value) : undefined)}
                 className="w-24"
               />
             </div>
           </div>
 
-          {/* Date Range */}
+          {/* Max Attempts Range */}
           <div className="space-y-2">
-            <Label>Date Range</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label htmlFor="enrolledAfter" className="text-xs">Enrolled After</Label>
-                <Input
-                  id="enrolledAfter"
-                  type="date"
-                  value={filters.enrolledAfter || ''}
-                  onChange={(e) => updateFilter('enrolledAfter', e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="enrolledBefore" className="text-xs">Enrolled Before</Label>
-                <Input
-                  id="enrolledBefore"
-                  type="date"
-                  value={filters.enrolledBefore || ''}
-                  onChange={(e) => updateFilter('enrolledBefore', e.target.value)}
-                />
-              </div>
+            <Label>Max Attempts</Label>
+            <div className="flex items-center space-x-2">
+              <Input
+                type="number"
+                min="0"
+                placeholder="Min"
+                value={filters.maxAttemptsMin || ''}
+                onChange={(e) => updateFilter('maxAttemptsMin', e.target.value ? parseInt(e.target.value) : undefined)}
+                className="w-24"
+              />
+              <span className="text-muted-foreground">to</span>
+              <Input
+                type="number"
+                min="0"
+                placeholder="Max"
+                value={filters.maxAttemptsMax || ''}
+                onChange={(e) => updateFilter('maxAttemptsMax', e.target.value ? parseInt(e.target.value) : undefined)}
+                className="w-24"
+              />
             </div>
           </div>
 
@@ -177,14 +218,14 @@ export function EnrollmentFilters({
             />
           </div>
 
-          {/* User ID */}
+          {/* Module ID */}
           <div className="space-y-2">
-            <Label htmlFor="userId">User ID</Label>
+            <Label htmlFor="moduleId">Module ID</Label>
             <Input
-              id="userId"
-              placeholder="User ID"
-              value={filters.userId || ''}
-              onChange={(e) => updateFilter('userId', e.target.value)}
+              id="moduleId"
+              placeholder="Module ID"
+              value={filters.moduleId || ''}
+              onChange={(e) => updateFilter('moduleId', e.target.value)}
             />
           </div>
 
@@ -207,11 +248,14 @@ export function EnrollmentFilters({
             
             <div className="space-y-3">
               {[
-                { field: 'enrolledAt', label: 'Enrollment Date' },
-                { field: 'completedAt', label: 'Completion Date' },
-                { field: 'progress', label: 'Progress' },
-                { field: 'lastAccessedAt', label: 'Last Accessed' },
-                { field: 'status', label: 'Status' },
+                { field: 'title', label: 'Title' },
+                { field: 'type', label: 'Type' },
+                { field: 'timeLimit', label: 'Time Limit' },
+                { field: 'passingScore', label: 'Passing Score' },
+                { field: 'maxAttempts', label: 'Max Attempts' },
+                { field: 'createdAt', label: 'Creation Date' },
+                { field: 'updatedAt', label: 'Last Update' },
+                { field: 'isPublished', label: 'Published Status' },
               ].map(({ field, label }) => (
                 <div key={field} className="flex items-center justify-between">
                   <span className="text-sm">{label}</span>

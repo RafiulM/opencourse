@@ -2,7 +2,6 @@
 
 import { use } from "react"
 import { notFound } from "next/navigation"
-import { useQueryState } from "nuqs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -42,7 +41,6 @@ import { useCourses } from "@/hooks/use-courses"
 import { Community } from "@/lib/types"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
-import { EditCommunitySheet } from "@/components/edit-community-sheet"
 
 interface CommunityDetailPageProps {
   params: Promise<{
@@ -53,9 +51,8 @@ interface CommunityDetailPageProps {
 export default function CommunityDetailPage({ params }: CommunityDetailPageProps) {
   const { id } = use(params)
   const router = useRouter()
-  const [editOpen, setEditOpen] = useQueryState('edit', { defaultValue: false })
   const { data: communityResponse, isLoading, error } = useCommunity(id)
-  const { data: coursesResponse } = useCourses(1, 20, id)
+  const { data: coursesResponse } = useCourses(1, 20, { communityId: id })
   const deleteCommunityMutation = useDeleteCommunity()
 
   if (error) {
@@ -144,13 +141,12 @@ export default function CommunityDetailPage({ params }: CommunityDetailPageProps
           </Link>
         </div>
         <div className="flex items-center space-x-2">
-          <Button 
-            variant="outline"
-            onClick={() => setEditOpen(true)}
-          >
-            <Edit className="mr-2 h-4 w-4" />
-            Edit
-          </Button>
+          <Link href={`/dashboard/admin/communities/${community.id}/edit`}>
+            <Button variant="outline">
+              <Edit className="mr-2 h-4 w-4" />
+              Edit
+            </Button>
+          </Link>
           <Button 
             variant="destructive"
             onClick={handleDelete}
@@ -367,12 +363,6 @@ export default function CommunityDetailPage({ params }: CommunityDetailPageProps
         </CardContent>
       </Card>
 
-      {/* Edit Community Sheet */}
-      <EditCommunitySheet
-        community={community}
-        open={editOpen}
-        onOpenChange={setEditOpen}
-      />
     </div>
   )
 }
