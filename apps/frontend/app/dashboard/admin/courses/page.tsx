@@ -52,7 +52,7 @@ export default function CoursesPage() {
   const limit = 10
 
   const { data: communitiesData } = useCommunities(1, 100) // Get all communities for filter
-  const { data, isLoading, error } = useCourses(page, limit, selectedCommunity === "all" ? undefined : selectedCommunity)
+  const { data, isLoading, error } = useCourses(page, limit, selectedCommunity === "all" ? {} : { communityId: selectedCommunity })
   const deleteCourseMutation = useDeleteCourse()
 
   const handleDelete = async (course: Course) => {

@@ -80,7 +80,7 @@ const router: Router = Router();
 router.get('/my', authenticate, async (req, res) => {
   try {
     const queryOptions = validateUploadQueryOptions(req.query);
-    
+
     const filters: any = {};
     if (queryOptions.filters.uploadType) filters.uploadType = queryOptions.filters.uploadType;
     if (queryOptions.filters.status) filters.status = queryOptions.filters.status;
@@ -96,7 +96,7 @@ router.get('/my', authenticate, async (req, res) => {
     }
     if (queryOptions.filters.createdAt) filters.createdAt = queryOptions.filters.createdAt;
     if (queryOptions.filters.updatedAt) filters.updatedAt = queryOptions.filters.updatedAt;
-    
+
     const result = await UploadService.getUserUploads(
       req.user!.id,
       {
@@ -107,7 +107,7 @@ router.get('/my', authenticate, async (req, res) => {
         sort: queryOptions.sort
       }
     );
-    
+
     res.json({
       success: true,
       data: result.uploads,
@@ -123,7 +123,7 @@ router.get('/my', authenticate, async (req, res) => {
       const errorResponse = formatErrorResponse(error);
       return res.status(error.statusCode).json(errorResponse);
     }
-    
+
     const dbError = handleDatabaseError(error);
     const errorResponse = formatErrorResponse(dbError);
     res.status(dbError.statusCode).json(errorResponse);
@@ -156,7 +156,7 @@ router.get('/stats', authenticate, async (req, res) => {
       const errorResponse = formatErrorResponse(error);
       return res.status(error.statusCode).json(errorResponse);
     }
-    
+
     const dbError = handleDatabaseError(error);
     const errorResponse = formatErrorResponse(dbError);
     res.status(dbError.statusCode).json(errorResponse);
@@ -199,14 +199,14 @@ router.get('/stats', authenticate, async (req, res) => {
  */
 router.post('/sessions', authenticate, async (req, res) => {
   try {
-    const { 
-      uploadType, 
-      totalFiles, 
-      communityId, 
-      courseId, 
-      moduleId, 
-      materialId, 
-      metadata = {} 
+    const {
+      uploadType,
+      totalFiles,
+      communityId,
+      courseId,
+      moduleId,
+      materialId,
+      metadata = {}
     } = req.body;
 
     if (!uploadType || !totalFiles || totalFiles <= 0) {
@@ -241,7 +241,7 @@ router.post('/sessions', authenticate, async (req, res) => {
       const errorResponse = formatErrorResponse(error);
       return res.status(error.statusCode).json(errorResponse);
     }
-    
+
     const dbError = handleDatabaseError(error);
     const errorResponse = formatErrorResponse(dbError);
     res.status(dbError.statusCode).json(errorResponse);
@@ -291,7 +291,7 @@ router.get('/sessions/:sessionToken', authenticate, async (req, res) => {
       const errorResponse = formatErrorResponse(error);
       return res.status(error.statusCode).json(errorResponse);
     }
-    
+
     const dbError = handleDatabaseError(error);
     const errorResponse = formatErrorResponse(dbError);
     res.status(dbError.statusCode).json(errorResponse);
@@ -321,6 +321,9 @@ router.get('/sessions/:sessionToken', authenticate, async (req, res) => {
  *               uploadType:
  *                 type: string
  *                 enum: [community_avatar, community_banner, course_thumbnail, module_thumbnail, material_video, material_file, material_document, user_avatar]
+ *               fileSize:
+ *                 type: integer
+ *                 description: File size in bytes for validation
  *               expiresIn:
  *                 type: integer
  *                 default: 3600
@@ -340,12 +343,123 @@ router.get('/sessions/:sessionToken', authenticate, async (req, res) => {
  *       401:
  *         description: Authentication required
  */
+/**
+ * @swagger
+ * /api/uploads/max-file-size/{uploadType}:
+ *   get:
+ *     summary: Get maximum allowed file size for a specific upload type
+ *     tags: [Uploads]
+ *     parameters:
+ *       - in: path
+ *         name: uploadType
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [community_avatar, community_banner, course_thumbnail, module_thumbnail, material_video, material_file, material_document, user_avatar]
+ *     responses:
+ *       200:
+ *         description: Maximum file size information
+ *       400:
+ *         description: Invalid upload type
+ */
+/**
+ * @swagger
+ * /api/uploads/validation-rules:
+ *   get:
+ *     summary: Get all upload validation rules
+ *     tags: [Uploads]
+ *     responses:
+ *       200:
+ *         description: All upload validation rules
+ */
+router.get('/validation-rules', async (req, res) => {
+  try {
+    const { uploadValidation } = require('../lib/upload-validation');
+    
+    // Convert byte sizes to MB for easier reading
+    const rulesWithFormattedSizes = Object.entries(uploadValidation).map(([type, rules]: [string, any]) => ({
+      uploadType: type,
+      maxSizeBytes: rules.maxSize,
+      maxSizeMB: Math.round(rules.maxSize / (1024 * 1024)),
+      maxSizeFormatted: `${Math.round(rules.maxSize / (1024 * 1024))}MB`,
+      allowedTypes: rules.allowedTypes,
+      maxDimensions: rules.maxDimensions
+    }));
+
+    res.json({
+      success: true,
+      data: rulesWithFormattedSizes
+    });
+
+  } catch (error) {
+    console.error('❌ [UploadsRoute] Error getting validation rules:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get validation rules'
+    });
+  }
+});
+
+router.get('/max-file-size/:uploadType', async (req, res) => {
+  try {
+    const { uploadType } = req.params;
+    
+    const validUploadTypes = [
+      'community_avatar',
+      'community_banner',
+      'course_thumbnail',
+      'module_thumbnail',
+      'material_video',
+      'material_file',
+      'material_document',
+      'user_avatar'
+    ];
+
+    if (!validUploadTypes.includes(uploadType)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid uploadType. Must be one of: ${validUploadTypes.join(', ')}`
+      });
+    }
+
+    const maxSize = r2Service.getMaxAllowedFileSize(uploadType);
+    const maxSizeMB = Math.round(maxSize / (1024 * 1024));
+
+    res.json({
+      success: true,
+      data: {
+        uploadType,
+        maxSizeBytes: maxSize,
+        maxSizeMB,
+        maxSizeFormatted: `${maxSizeMB}MB`
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ [UploadsRoute] Error getting max file size:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get maximum file size'
+    });
+  }
+});
+
 router.post('/presigned-url', authenticate, async (req, res) => {
   try {
-    const { 
-      fileName, 
-      mimeType, 
-      uploadType, 
+    console.log('📥 [UploadsRoute] Presigned URL request received:', {
+      body: req.body,
+      user: req.user?.id,
+      headers: {
+        'content-type': req.headers['content-type'],
+        'authorization': req.headers.authorization ? 'Bearer ***' : 'none'
+      }
+    });
+
+    const {
+      fileName,
+      mimeType,
+      uploadType,
+      fileSize,
       expiresIn = 3600,
       communityId,
       courseId,
@@ -354,19 +468,34 @@ router.post('/presigned-url', authenticate, async (req, res) => {
     } = req.body;
 
     if (!fileName || !mimeType || !uploadType) {
+      console.error('❌ [UploadsRoute] Missing required fields:', {
+        hasFileName: !!fileName,
+        hasMimeType: !!mimeType,
+        hasUploadType: !!uploadType,
+        body: req.body
+      });
       return res.status(400).json({
         success: false,
         error: 'fileName, mimeType, and uploadType are required'
       });
     }
 
+    // Validate file size if provided
+    if (fileSize !== undefined && (typeof fileSize !== 'number' || fileSize <= 0)) {
+      console.error('❌ [UploadsRoute] Invalid fileSize:', { fileSize });
+      return res.status(400).json({
+        success: false,
+        error: 'fileSize must be a positive number if provided'
+      });
+    }
+
     const validUploadTypes = [
-      'community_avatar', 
-      'community_banner', 
-      'course_thumbnail', 
+      'community_avatar',
+      'community_banner',
+      'course_thumbnail',
       'module_thumbnail',
-      'material_video', 
-      'material_file', 
+      'material_video',
+      'material_file',
       'material_document',
       'user_avatar'
     ];
@@ -410,14 +539,22 @@ router.post('/presigned-url', authenticate, async (req, res) => {
     if (moduleId) associationIds.moduleId = moduleId;
     if (materialId) associationIds.materialId = materialId;
 
+    console.log('🔄 [UploadsRoute] Calling R2Service.generatePresignedUploadUrl...');
+
     const result = await r2Service.generatePresignedUploadUrl(
       uploadType,
       fileName,
       mimeType,
       req.user!.id,
       expiresIn,
-      associationIds
+      associationIds,
+      fileSize
     );
+
+    console.log('✅ [UploadsRoute] Presigned URL generated successfully:', {
+      uploadId: result.uploadId,
+      hasPresignedUrl: !!result.presignedUrl
+    });
 
     res.json({
       success: true,
@@ -429,7 +566,7 @@ router.post('/presigned-url', authenticate, async (req, res) => {
       const errorResponse = formatErrorResponse(error);
       return res.status(error.statusCode).json(errorResponse);
     }
-    
+
     const dbError = handleDatabaseError(error);
     const errorResponse = formatErrorResponse(dbError);
     res.status(dbError.statusCode).json(errorResponse);
@@ -470,24 +607,68 @@ router.post('/presigned-url', authenticate, async (req, res) => {
  */
 router.post('/:uploadId/complete', authenticate, async (req, res) => {
   try {
+    console.log('📥 [UploadsRoute] Complete upload request received:', {
+      uploadId: req.params.uploadId,
+      body: req.body,
+      user: req.user?.id
+    });
+
     const { uploadId } = req.params;
     const { fileSize, metadata = {} } = req.body;
 
     if (!fileSize || fileSize <= 0) {
+      console.error('❌ [UploadsRoute] Invalid fileSize:', { fileSize });
       return res.status(400).json({
         success: false,
         error: 'Valid fileSize is required'
       });
     }
 
-    const upload = await r2Service.completeUpload(uploadId, fileSize, metadata);
-
-    if (!upload) {
+    // Get the upload to check its type for size validation
+    const uploadInfo = await r2Service.getUploadInfo(uploadId);
+    if (!uploadInfo) {
+      console.error('❌ [UploadsRoute] Upload not found for validation:', { uploadId });
       return res.status(404).json({
         success: false,
         error: 'Upload not found'
       });
     }
+
+    // Validate file size against upload type limits
+    const { validateFileSize } = require('../lib/upload-validation');
+    const sizeValidation = validateFileSize(uploadInfo.uploadType, fileSize);
+    if (!sizeValidation.isValid) {
+      console.error('❌ [UploadsRoute] File size validation failed:', { 
+        fileSize, 
+        uploadType: uploadInfo.uploadType, 
+        error: sizeValidation.error 
+      });
+      return res.status(400).json({
+        success: false,
+        error: sizeValidation.error
+      });
+    }
+
+    console.log('✅ [UploadsRoute] File size validation passed:', { 
+      fileSize, 
+      uploadType: uploadInfo.uploadType 
+    });
+
+    console.log('🔄 [UploadsRoute] Calling R2Service.completeUpload...');
+    const upload = await r2Service.completeUpload(uploadId, fileSize, metadata);
+
+    if (!upload) {
+      console.error('❌ [UploadsRoute] Upload not found:', { uploadId });
+      return res.status(404).json({
+        success: false,
+        error: 'Upload not found'
+      });
+    }
+
+    console.log('✅ [UploadsRoute] Upload completed successfully:', {
+      uploadId: upload.id,
+      status: upload.status
+    });
 
     res.json({
       success: true,
@@ -496,11 +677,13 @@ router.post('/:uploadId/complete', authenticate, async (req, res) => {
     });
 
   } catch (error) {
+    console.error('💥 [UploadsRoute] Error in presigned-url route:', error);
+
     if (error instanceof AppError) {
       const errorResponse = formatErrorResponse(error);
       return res.status(error.statusCode).json(errorResponse);
     }
-    
+
     const dbError = handleDatabaseError(error);
     const errorResponse = formatErrorResponse(dbError);
     res.status(dbError.statusCode).json(errorResponse);
@@ -535,10 +718,22 @@ router.post('/:uploadId/complete', authenticate, async (req, res) => {
  */
 router.post('/:uploadId/fail', authenticate, async (req, res) => {
   try {
+    console.log('📥 [UploadsRoute] Fail upload request received:', {
+      uploadId: req.params.uploadId,
+      body: req.body,
+      user: req.user?.id
+    });
+
     const { uploadId } = req.params;
     const { error: errorMessage } = req.body;
 
+    console.log('🔄 [UploadsRoute] Calling R2Service.failUpload...');
     const upload = await r2Service.failUpload(uploadId, errorMessage);
+
+    console.log('✅ [UploadsRoute] Upload marked as failed successfully:', {
+      uploadId: upload?.id,
+      status: upload?.status
+    });
 
     res.json({
       success: true,
@@ -547,11 +742,13 @@ router.post('/:uploadId/fail', authenticate, async (req, res) => {
     });
 
   } catch (error) {
+    console.error('💥 [UploadsRoute] Error in fail upload route:', error);
+
     if (error instanceof AppError) {
       const errorResponse = formatErrorResponse(error);
       return res.status(error.statusCode).json(errorResponse);
     }
-    
+
     const dbError = handleDatabaseError(error);
     const errorResponse = formatErrorResponse(dbError);
     res.status(dbError.statusCode).json(errorResponse);
@@ -608,7 +805,7 @@ router.get('/:uploadId/download', async (req, res) => {
       const errorResponse = formatErrorResponse(error);
       return res.status(error.statusCode).json(errorResponse);
     }
-    
+
     const dbError = handleDatabaseError(error);
     const errorResponse = formatErrorResponse(dbError);
     res.status(dbError.statusCode).json(errorResponse);
@@ -658,7 +855,7 @@ router.get('/:uploadId', authenticate, async (req, res) => {
       const errorResponse = formatErrorResponse(error);
       return res.status(error.statusCode).json(errorResponse);
     }
-    
+
     const dbError = handleDatabaseError(error);
     const errorResponse = formatErrorResponse(dbError);
     res.status(dbError.statusCode).json(errorResponse);
@@ -709,7 +906,7 @@ router.delete('/:uploadId', authenticate, async (req, res) => {
       const errorResponse = formatErrorResponse(error);
       return res.status(error.statusCode).json(errorResponse);
     }
-    
+
     const dbError = handleDatabaseError(error);
     const errorResponse = formatErrorResponse(dbError);
     res.status(dbError.statusCode).json(errorResponse);

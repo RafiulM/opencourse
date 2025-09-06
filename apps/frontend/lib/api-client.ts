@@ -89,10 +89,20 @@ export class ApiClient {
   ): Promise<PaginatedResponse<Community>> {
     const params = new URLSearchParams({
       page: page.toString(),
-      pageSize: limit.toString(),
-      ...Object.fromEntries(
-        Object.entries(filters).filter(([_, value]) => value !== undefined && value !== null && value !== '')
-      )
+      pageSize: limit.toString()
+    });
+    
+    // Add filter parameters
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        if (typeof value === 'object') {
+          // Handle objects by converting to JSON string
+          params.set(key, JSON.stringify(value));
+        } else {
+          // Convert primitive values to string
+          params.set(key, String(value));
+        }
+      }
     });
     
     if (sort.length > 0) {
@@ -135,10 +145,20 @@ export class ApiClient {
   ): Promise<PaginatedResponse<Course>> {
     const params = new URLSearchParams({
       page: page.toString(),
-      pageSize: limit.toString(),
-      ...Object.fromEntries(
-        Object.entries(filters).filter(([_, value]) => value !== undefined && value !== null && value !== '')
-      )
+      pageSize: limit.toString()
+    });
+    
+    // Add filter parameters
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        if (typeof value === 'object') {
+          // Handle objects by converting to JSON string
+          params.set(key, JSON.stringify(value));
+        } else {
+          // Convert primitive values to string
+          params.set(key, String(value));
+        }
+      }
     });
     
     if (sort.length > 0) {
@@ -173,8 +193,36 @@ export class ApiClient {
   }
 
   // Course Modules CRUD
-  async getCourseModules(courseId: string): Promise<ApiResponse<CourseModule[]>> {
-    return this.request<ApiResponse<CourseModule[]>>(`/courses/${courseId}/modules`);
+  async getCourseModules(
+    courseId: string,
+    page = 1, 
+    limit = 20, 
+    filters: Record<string, any> = {},
+    sort: string[] = []
+  ): Promise<PaginatedResponse<CourseModule>> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: limit.toString()
+    });
+    
+    // Add filter parameters
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        if (typeof value === 'object') {
+          // Handle objects by converting to JSON string
+          params.set(key, JSON.stringify(value));
+        } else {
+          // Convert primitive values to string
+          params.set(key, String(value));
+        }
+      }
+    });
+    
+    if (sort.length > 0) {
+      params.set('sort', sort.join(','));
+    }
+    
+    return this.request<PaginatedResponse<CourseModule>>(`/courses/${courseId}/modules?${params}`);
   }
 
   async getCourseModule(id: string): Promise<ApiResponse<CourseModule>> {
@@ -210,10 +258,20 @@ export class ApiClient {
   ): Promise<PaginatedResponse<Enrollment>> {
     const params = new URLSearchParams({
       page: page.toString(),
-      pageSize: limit.toString(),
-      ...Object.fromEntries(
-        Object.entries(filters).filter(([_, value]) => value !== undefined && value !== null && value !== '')
-      )
+      pageSize: limit.toString()
+    });
+    
+    // Add filter parameters
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        if (typeof value === 'object') {
+          // Handle objects by converting to JSON string
+          params.set(key, JSON.stringify(value));
+        } else {
+          // Convert primitive values to string
+          params.set(key, String(value));
+        }
+      }
     });
     
     if (sort.length > 0) {
@@ -256,10 +314,20 @@ export class ApiClient {
   ): Promise<PaginatedResponse<Quiz>> {
     const params = new URLSearchParams({
       page: page.toString(),
-      pageSize: limit.toString(),
-      ...Object.fromEntries(
-        Object.entries(filters).filter(([_, value]) => value !== undefined && value !== null && value !== '')
-      )
+      pageSize: limit.toString()
+    });
+    
+    // Add filter parameters
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        if (typeof value === 'object') {
+          // Handle objects by converting to JSON string
+          params.set(key, JSON.stringify(value));
+        } else {
+          // Convert primitive values to string
+          params.set(key, String(value));
+        }
+      }
     });
     
     if (sort.length > 0) {
@@ -294,8 +362,36 @@ export class ApiClient {
   }
 
   // Course Materials CRUD
-  async getCourseMaterials(moduleId: string): Promise<ApiResponse<CourseMaterial[]>> {
-    return this.request<ApiResponse<CourseMaterial[]>>(`/courses/modules/${moduleId}/materials`);
+  async getCourseMaterials(
+    moduleId: string,
+    page = 1, 
+    limit = 20, 
+    filters: Record<string, any> = {},
+    sort: string[] = []
+  ): Promise<PaginatedResponse<CourseMaterial>> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: limit.toString()
+    });
+    
+    // Add filter parameters
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        if (typeof value === 'object') {
+          // Handle objects by converting to JSON string
+          params.set(key, JSON.stringify(value));
+        } else {
+          // Convert primitive values to string
+          params.set(key, String(value));
+        }
+      }
+    });
+    
+    if (sort.length > 0) {
+      params.set('sort', sort.join(','));
+    }
+    
+    return this.request<PaginatedResponse<CourseMaterial>>(`/courses/modules/${moduleId}/materials?${params}`);
   }
 
   async getCourseMaterial(id: string): Promise<ApiResponse<CourseMaterial>> {
@@ -322,7 +418,7 @@ export class ApiClient {
     });
   }
 
-  // Enrollments CRUD
+  // Uploads CRUD
   async getUploads(
     page = 1, 
     limit = 20, 
@@ -331,10 +427,20 @@ export class ApiClient {
   ): Promise<PaginatedResponse<Upload>> {
     const params = new URLSearchParams({
       page: page.toString(),
-      pageSize: limit.toString(),
-      ...Object.fromEntries(
-        Object.entries(filters).filter(([_, value]) => value !== undefined && value !== null && value !== '')
-      )
+      pageSize: limit.toString()
+    });
+    
+    // Add filter parameters
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        if (typeof value === 'object') {
+          // Handle objects by converting to JSON string
+          params.set(key, JSON.stringify(value));
+        } else {
+          // Convert primitive values to string
+          params.set(key, String(value));
+        }
+      }
     });
     
     if (sort.length > 0) {
@@ -378,10 +484,20 @@ export class ApiClient {
   ): Promise<PaginatedResponse<LeaderboardEntry>> {
     const params = new URLSearchParams({
       page: page.toString(),
-      pageSize: limit.toString(),
-      ...Object.fromEntries(
-        Object.entries(filters).filter(([_, value]) => value !== undefined && value !== null && value !== '')
-      )
+      pageSize: limit.toString()
+    });
+    
+    // Add filter parameters
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        if (typeof value === 'object') {
+          // Handle objects by converting to JSON string
+          params.set(key, JSON.stringify(value));
+        } else {
+          // Convert primitive values to string
+          params.set(key, String(value));
+        }
+      }
     });
     
     if (sort.length > 0) {
@@ -400,10 +516,20 @@ export class ApiClient {
   ): Promise<PaginatedResponse<LeaderboardEntry>> {
     const params = new URLSearchParams({
       page: page.toString(),
-      pageSize: limit.toString(),
-      ...Object.fromEntries(
-        Object.entries(filters).filter(([_, value]) => value !== undefined && value !== null && value !== '')
-      )
+      pageSize: limit.toString()
+    });
+    
+    // Add filter parameters
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        if (typeof value === 'object') {
+          // Handle objects by converting to JSON string
+          params.set(key, JSON.stringify(value));
+        } else {
+          // Convert primitive values to string
+          params.set(key, String(value));
+        }
+      }
     });
     
     if (sort.length > 0) {

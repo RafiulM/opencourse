@@ -190,6 +190,8 @@ export interface UpdateCommunityRequest extends Partial<CreateCommunityRequest> 
   id: string;
   avatar?: string;
   avatarUploadId?: string;
+  banner?: string;
+  bannerUploadId?: string;
 }
 
 export interface CreateCourseRequest {

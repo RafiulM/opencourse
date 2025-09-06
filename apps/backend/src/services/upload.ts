@@ -5,6 +5,7 @@ import { uploads, uploadSessions, uploadTypeEnum, uploadStatusEnum } from '../db
 import { eq, and, isNull, desc, asc, count, ilike, gte, lte, or } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { extname } from 'path';
+import { validateFileSize, validateMimeType, UploadType, getMaxFileSize as getMaxFileSizeFromValidation } from '../lib/upload-validation';
 
 interface R2Config {
   endpoint: string;
@@ -44,6 +45,16 @@ class R2Service {
   private publicDomain?: string;
 
   constructor(config: R2Config) {
+    console.log('🔧 [R2Service] Initializing with config:', {
+      endpoint: config.endpoint ? 'configured' : 'missing',
+      accessKeyId: config.accessKeyId ? 'configured' : 'missing',
+      secretAccessKey: config.secretAccessKey ? 'configured' : 'missing',
+      bucket: config.bucket,
+      publicBucket: config.publicBucket,
+      privateBucket: config.privateBucket,
+      publicDomain: config.publicDomain
+    });
+
     this.s3Client = new S3Client({
       region: 'auto',
       endpoint: config.endpoint,
@@ -57,6 +68,8 @@ class R2Service {
     this.publicBucket = config.publicBucket;
     this.privateBucket = config.privateBucket;
     this.publicDomain = config.publicDomain;
+
+    console.log('✅ [R2Service] Initialized successfully');
   }
 
   private isPublicUploadType(uploadType: string): boolean {
@@ -109,6 +122,10 @@ class R2Service {
     return `https://${bucket}.r2.cloudflarestorage.com/${r2Key}`;
   }
 
+  getMaxAllowedFileSize(uploadType: string): number {
+    return getMaxFileSizeFromValidation(uploadType as UploadType);
+  }
+
   async generatePresignedUploadUrl(
     uploadType: string,
     fileName: string,
@@ -120,10 +137,43 @@ class R2Service {
       courseId?: string;
       moduleId?: string;
       materialId?: string;
-    } = {}
+    } = {},
+    fileSize?: number // Optional file size for validation
   ) {
+    console.log('🔄 [R2Service] Generating presigned upload URL:', {
+      uploadType,
+      fileName,
+      mimeType,
+      userId,
+      expiresIn,
+      associationIds,
+      fileSize
+    });
+
+    // Validate file size if provided
+    if (fileSize !== undefined) {
+      const sizeValidation = validateFileSize(uploadType as UploadType, fileSize);
+      if (!sizeValidation.isValid) {
+        throw new Error(sizeValidation.error);
+      }
+      console.log('✅ [R2Service] File size validation passed:', { fileSize });
+    }
+
+    // Validate MIME type
+    const mimeValidation = validateMimeType(uploadType as UploadType, mimeType);
+    if (!mimeValidation.isValid) {
+      throw new Error(mimeValidation.error);
+    }
+    console.log('✅ [R2Service] MIME type validation passed:', { mimeType });
+
     const r2Key = this.generateR2Key(uploadType, fileName, userId);
     const bucket = this.getBucketForUploadType(uploadType);
+
+    console.log('📋 [R2Service] Generated R2 key and bucket:', {
+      r2Key,
+      bucket,
+      isPublic: this.isPublicUploadType(uploadType)
+    });
 
     const command = new PutObjectCommand({
       Bucket: bucket,
@@ -131,11 +181,19 @@ class R2Service {
       ContentType: mimeType,
     });
 
+    console.log('🔐 [R2Service] Creating presigned URL with S3 client...');
+
     const presignedUrl = await getSignedUrl(this.s3Client, command, {
       expiresIn,
     });
 
+    console.log('✅ [R2Service] Presigned URL generated successfully:', {
+      presignedUrlLength: presignedUrl.length,
+      expiresIn
+    });
+
     // Create upload record
+    console.log('💾 [R2Service] Creating upload record in database...');
     const uploadRecords = await db.insert(uploads).values({
       originalName: fileName,
       fileName: fileName,
@@ -154,16 +212,37 @@ class R2Service {
 
     const uploadRecord = uploadRecords[0];
 
-    return {
+    console.log('✅ [R2Service] Upload record created successfully:', {
+      uploadId: uploadRecord.id,
+      r2Key: uploadRecord.r2Key,
+      status: uploadRecord.status
+    });
+
+    const result = {
       uploadId: uploadRecord.id,
       presignedUrl,
       r2Key,
       publicUrl: this.getPublicUrl(r2Key, bucket, uploadType),
       expiresAt: uploadRecord.r2PresignedExpiresAt,
     };
+
+    console.log('🎯 [R2Service] Returning presigned URL result:', {
+      uploadId: result.uploadId,
+      hasPresignedUrl: !!result.presignedUrl,
+      hasPublicUrl: !!result.publicUrl,
+      expiresAt: result.expiresAt
+    });
+
+    return result;
   }
 
   async completeUpload(uploadId: string, fileSize: number, metadata: Record<string, any> = {}) {
+    console.log('🏁 [R2Service] Completing upload:', {
+      uploadId,
+      fileSize,
+      metadata
+    });
+
     const [updatedUpload] = await db
       .update(uploads)
       .set({
@@ -177,10 +256,22 @@ class R2Service {
       .where(eq(uploads.id, uploadId))
       .returning();
 
+    console.log('✅ [R2Service] Upload completed successfully:', {
+      uploadId: updatedUpload.id,
+      status: updatedUpload.status,
+      fileSize: updatedUpload.fileSize,
+      r2Url: updatedUpload.r2Url
+    });
+
     return updatedUpload;
   }
 
   async failUpload(uploadId: string, error?: string) {
+    console.log('💥 [R2Service] Marking upload as failed:', {
+      uploadId,
+      error
+    });
+
     const [upload] = await db
       .select()
       .from(uploads)
@@ -188,14 +279,18 @@ class R2Service {
       .limit(1);
 
     if (upload) {
+      console.log('🗑️ [R2Service] Attempting to delete R2 object:', upload.r2Key);
+
       // Delete from R2 if it exists
       try {
         await this.deleteFromR2(upload.r2Key);
+        console.log('✅ [R2Service] R2 object deleted successfully');
       } catch (error) {
-        console.warn(`Failed to delete R2 object ${upload.r2Key}:`, error);
+        console.warn(`❌ [R2Service] Failed to delete R2 object ${upload.r2Key}:`, error);
       }
 
       // Update status
+      console.log('📝 [R2Service] Updating upload status to failed in database...');
       await db
         .update(uploads)
         .set({
@@ -204,6 +299,10 @@ class R2Service {
           updatedAt: new Date(),
         })
         .where(eq(uploads.id, uploadId));
+
+      console.log('✅ [R2Service] Upload marked as failed successfully');
+    } else {
+      console.warn('⚠️ [R2Service] Upload not found for failure marking:', uploadId);
     }
 
     return upload;
@@ -366,6 +465,8 @@ class R2Service {
 }
 
 // Initialize R2 service with environment variables
+console.log('🚀 [UploadService] Initializing R2Service with environment variables...');
+
 const r2Config: R2Config = {
   endpoint: process.env.R2_ENDPOINT || '',
   accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
@@ -375,6 +476,16 @@ const r2Config: R2Config = {
   privateBucket: process.env.R2_PRIVATE_BUCKET, // Optional separate private bucket
   publicDomain: process.env.R2_PUBLIC_DOMAIN,
 };
+
+console.log('📋 [UploadService] R2 Configuration loaded:', {
+  hasEndpoint: !!r2Config.endpoint,
+  hasAccessKeyId: !!r2Config.accessKeyId,
+  hasSecretAccessKey: !!r2Config.secretAccessKey,
+  hasBucket: !!r2Config.bucket,
+  hasPublicBucket: !!r2Config.publicBucket,
+  hasPrivateBucket: !!r2Config.privateBucket,
+  hasPublicDomain: !!r2Config.publicDomain
+});
 
 export const r2Service = new R2Service(r2Config);
 

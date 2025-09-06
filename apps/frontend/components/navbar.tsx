@@ -8,9 +8,44 @@ import { LogOut, BookOpen, Users, Grid3X3 } from "lucide-react";
 import { useCommunities } from "@/hooks/use-communities";
 
 export function Navbar() {
-  const { data: session } = useSession();
+  const { data: session, isPending } = useSession();
   const { data: communitiesData } = useCommunities(1, 100); // Fetch to check if communities exist
   
+  // Show skeleton while session is loading
+  if (isPending) {
+    return (
+      <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo skeleton */}
+            <div className="flex items-center space-x-2">
+              <div className="h-6 w-6 bg-muted rounded animate-pulse"></div>
+              <div className="h-6 w-24 bg-muted rounded animate-pulse"></div>
+            </div>
+
+            {/* Navigation items skeleton */}
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3">
+                <div className="hidden md:flex items-center space-x-2">
+                  <div className="h-8 w-20 bg-muted rounded animate-pulse"></div>
+                  <div className="h-8 w-32 bg-muted rounded animate-pulse"></div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="hidden sm:flex items-center space-x-2">
+                    <div className="h-8 w-8 rounded-full bg-muted animate-pulse"></div>
+                    <div className="h-4 w-20 bg-muted rounded animate-pulse"></div>
+                  </div>
+                  <div className="h-8 w-8 rounded-full bg-muted animate-pulse sm:hidden"></div>
+                  <div className="h-8 w-20 bg-muted rounded animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
   // Check if user should see create community button
   // In a real app, you'd check if the authenticated user owns/manages any communities
   // For demo purposes, we'll only show "Create Community" if no communities exist at all

@@ -2,7 +2,7 @@
 
 import { use } from "react"
 import { notFound } from "next/navigation"
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -25,6 +25,7 @@ import { useCourse, useUpdateCourse } from "@/hooks/use-courses";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { CourseThumbnailUpload } from "@/components/uploads/course-thumbnail-upload";
 
 const updateCourseSchema = z.object({
   title: z.string().min(1, "Title is required").max(200, "Title too long"),
@@ -56,6 +57,7 @@ export default function EditCoursePage({ params }: EditCoursePageProps) {
   const router = useRouter()
   const { data: courseResponse, isLoading, error } = useCourse(id)
   const updateCourseMutation = useUpdateCourse();
+  const [uploadedThumbnailUrl, setUploadedThumbnailUrl] = useState<string>("");
 
   const {
     register,
@@ -82,6 +84,76 @@ export default function EditCoursePage({ params }: EditCoursePageProps) {
   const difficulty = watch("difficulty");
   const isPublished = watch("isPublished");
   const isFeatured = watch("isFeatured");
+
+  const course = courseResponse?.data
+
+  useEffect(() => {
+    if (course) {
+      reset({
+        title: course.title,
+        slug: course.slug,
+        description: course.description || "",
+        thumbnail: course.thumbnail || "",
+        price: course.price,
+        duration: course.duration,
+        difficulty: course.difficulty as "beginner" | "intermediate" | "advanced" | undefined,
+        prerequisites: course.prerequisites || [],
+        learningOutcomes: course.learningOutcomes || [],
+        isPublished: course.isPublished,
+        isFeatured: course.isFeatured,
+      });
+      setUploadedThumbnailUrl("");
+    }
+  }, [course, reset]);
+
+  const onSubmit = async (data: UpdateCourseForm) => {
+    if (!course) return;
+
+    try {
+      const finalThumbnailUrl = uploadedThumbnailUrl || data.thumbnail || undefined;
+      
+      const updateData: UpdateCourseRequest = {
+        id: course.id,
+        title: data.title,
+        slug: data.slug,
+        description: data.description || undefined,
+        thumbnail: finalThumbnailUrl,
+        price: data.price,
+        duration: data.duration,
+        difficulty: data.difficulty,
+        prerequisites: data.prerequisites.filter(p => p.trim()),
+        learningOutcomes: data.learningOutcomes.filter(o => o.trim()),
+        isPublished: data.isPublished,
+        isFeatured: data.isFeatured,
+      };
+
+      await updateCourseMutation.mutateAsync(updateData);
+      toast.success("Course updated successfully");
+      router.push(`/dashboard/admin/courses/${course.id}`);
+    } catch (error) {
+      console.error("Update course error:", error);
+      toast.error("Failed to update course");
+    }
+  };
+
+  const handleThumbnailUpdate = (thumbnailUrl: string, uploadId: string) => {
+    setUploadedThumbnailUrl(thumbnailUrl);
+    setValue("thumbnail", thumbnailUrl);
+  };
+
+  const generateSlug = (title: string) => {
+    return title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+  };
+
+  const handleTitleChange = (title: string) => {
+    setValue("title", title);
+    if (!watch("slug") || watch("slug") === generateSlug(course?.title || "")) {
+      setValue("slug", generateSlug(title));
+    }
+  };
 
   if (error) {
     if (error.message.includes('404')) {
@@ -112,70 +184,9 @@ export default function EditCoursePage({ params }: EditCoursePageProps) {
     )
   }
 
-  const course = courseResponse?.data
   if (!course) {
     notFound()
   }
-
-  useEffect(() => {
-    if (course) {
-      reset({
-        title: course.title,
-        slug: course.slug,
-        description: course.description || "",
-        thumbnail: course.thumbnail || "",
-        price: course.price,
-        duration: course.duration,
-        difficulty: course.difficulty as "beginner" | "intermediate" | "advanced" | undefined,
-        prerequisites: course.prerequisites || [],
-        learningOutcomes: course.learningOutcomes || [],
-        isPublished: course.isPublished,
-        isFeatured: course.isFeatured,
-      });
-    }
-  }, [course, reset]);
-
-  const onSubmit = async (data: UpdateCourseForm) => {
-    if (!course) return;
-
-    try {
-      const updateData: UpdateCourseRequest = {
-        id: course.id,
-        title: data.title,
-        slug: data.slug,
-        description: data.description || undefined,
-        thumbnail: data.thumbnail || undefined,
-        price: data.price,
-        duration: data.duration,
-        difficulty: data.difficulty,
-        prerequisites: data.prerequisites.filter(p => p.trim()),
-        learningOutcomes: data.learningOutcomes.filter(o => o.trim()),
-        isPublished: data.isPublished,
-        isFeatured: data.isFeatured,
-      };
-
-      await updateCourseMutation.mutateAsync(updateData);
-      toast.success("Course updated successfully");
-      router.push(`/dashboard/admin/courses/${course.id}`);
-    } catch (error) {
-      console.error("Update course error:", error);
-      toast.error("Failed to update course");
-    }
-  };
-
-  const generateSlug = (title: string) => {
-    return title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
-  };
-
-  const handleTitleChange = (title: string) => {
-    setValue("title", title);
-    if (!watch("slug") || watch("slug") === generateSlug(course?.title || "")) {
-      setValue("slug", generateSlug(title));
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -243,15 +254,29 @@ export default function EditCoursePage({ params }: EditCoursePageProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="thumbnail">Thumbnail URL</Label>
-                <Input
-                  id="thumbnail"
-                  placeholder="https://example.com/image.jpg (optional)"
-                  {...register("thumbnail")}
-                />
-                {errors.thumbnail && (
-                  <p className="text-sm text-red-600">{errors.thumbnail.message}</p>
-                )}
+                <Label htmlFor="thumbnail">Course Thumbnail</Label>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <CourseThumbnailUpload
+                      currentThumbnailUrl={uploadedThumbnailUrl || watch("thumbnail")}
+                      onThumbnailUpdate={handleThumbnailUpdate}
+                      courseId={course.id}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="thumbnail-url" className="text-sm text-muted-foreground">
+                      Or paste URL:
+                    </Label>
+                    <Input
+                      id="thumbnail-url"
+                      placeholder="https://example.com/image.jpg"
+                      {...register("thumbnail")}
+                    />
+                    {errors.thumbnail && (
+                      <p className="text-sm text-red-600">{errors.thumbnail.message}</p>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
