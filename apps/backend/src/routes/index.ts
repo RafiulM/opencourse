@@ -1,10 +1,13 @@
 import { Router } from 'express';
 import communitiesRouter from './communities';
+import communityPostsRouter from './community-posts';
 import coursesRouter from './courses';
 import enrollmentsRouter from './enrollments';
 import quizzesRouter from './quizzes';
 import scoreboardRouter from './scoreboard';
 import uploadsRouter from './uploads';
+import postsRouter from './posts';
+import commentsRouter from './comments';
 
 const router: Router = Router();
 
@@ -41,11 +44,13 @@ router.get('/', (req, res) => {
       version: '1.0.0',
       availableEndpoints: [
         '/api/communities',
-        '/api/courses', 
+        '/api/courses',
         '/api/enrollments',
         '/api/quizzes',
         '/api/scoreboard',
-        '/api/uploads'
+        '/api/uploads',
+        '/api/posts',
+        '/api/comments'
       ]
     }
   });
@@ -53,10 +58,13 @@ router.get('/', (req, res) => {
 
 // Register all route modules
 router.use('/communities', communitiesRouter);
+router.use('/communities', communityPostsRouter);
 router.use('/courses', coursesRouter);
 router.use('/enrollments', enrollmentsRouter);
 router.use('/quizzes', quizzesRouter);
 router.use('/scoreboard', scoreboardRouter);
 router.use('/uploads', uploadsRouter);
+router.use('/posts', postsRouter);
+router.use('/comments', commentsRouter);
 
 export default router;

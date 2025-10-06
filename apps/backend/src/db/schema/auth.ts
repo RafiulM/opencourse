@@ -5,6 +5,8 @@ import { courses } from "./course";
 import { enrollments, materialProgress } from "./enrollment";
 import { quizAttempts } from "./quiz";
 import { userAchievements, userScores } from "./scoreboard";
+import { posts, postLikes } from "./posts";
+import { postComments, commentLikes } from "./comments";
 
 export const userRoleEnum = pgEnum('user_role', ['admin', 'instructor', 'student']);
 export const user = pgTable("user", {
@@ -79,4 +81,9 @@ export const usersRelations = relations(user, ({ many }) => ({
     scores: many(userScores),
     achievements: many(userAchievements),
     materialProgress: many(materialProgress),
+    posts: many(posts),
+    postLikes: many(postLikes),
+    comments: many(postComments),
+    commentLikes: many(commentLikes),
+    // moderatedComments relation is handled in postComments schema
 }));

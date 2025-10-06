@@ -74,21 +74,45 @@ export class CommunityService {
   }
 
   // Get Community by ID
-  static async getCommunityById(id: string) {
+  static async getCommunityById(id: string, userId?: string) {
     const [community] = await db.select()
       .from(communities)
       .where(eq(communities.id, id))
       .limit(1);
 
+    if (!community) {
+      return null;
+    }
+
+    // If community is private, check if user is a member
+    if (community.privacy === 'private' && userId) {
+      const isMember = await CommunityMemberService.isMember(userId, id);
+      if (!isMember) {
+        return null;
+      }
+    }
+
     return community;
   }
 
   // Get Community by Slug
-  static async getCommunityBySlug(slug: string) {
+  static async getCommunityBySlug(slug: string, userId?: string) {
     const [community] = await db.select()
       .from(communities)
       .where(eq(communities.slug, slug))
       .limit(1);
+
+    if (!community) {
+      return null;
+    }
+
+    // If community is private, check if user is a member
+    if (community.privacy === 'private' && userId) {
+      const isMember = await CommunityMemberService.isMember(userId, community.id);
+      if (!isMember) {
+        return null;
+      }
+    }
 
     return community;
   }
@@ -252,7 +276,13 @@ export class CommunityService {
   }
 
   // Update Community
-  static async updateCommunity(id: string, data: UpdateCommunityData) {
+  static async updateCommunity(id: string, data: UpdateCommunityData, userId: string) {
+    // Check if user is owner or moderator
+    const member = await CommunityMemberService.getMemberByUserAndCommunity(userId, id);
+    if (!member || !['owner', 'moderator'].includes(member.role)) {
+      throw new Error('Unauthorized: Only owners and moderators can update communities');
+    }
+
     const [community] = await db.update(communities)
       .set({
         ...data,
@@ -265,7 +295,13 @@ export class CommunityService {
   }
 
   // Delete Community
-  static async deleteCommunity(id: string) {
+  static async deleteCommunity(id: string, userId: string) {
+    // Check if user is owner
+    const member = await CommunityMemberService.getMemberByUserAndCommunity(userId, id);
+    if (!member || member.role !== 'owner') {
+      throw new Error('Unauthorized: Only owners can delete communities');
+    }
+
     const communitiesResult = await db.delete(communities)
       .where(eq(communities.id, id))
       .returning();
@@ -355,7 +391,28 @@ export class CommunityMemberService {
   }
 
   // Update Member Role
-  static async updateMemberRole(id: string, data: UpdateCommunityMemberData) {
+  static async updateMemberRole(id: string, data: UpdateCommunityMemberData, requestUserId: string) {
+    // Get the member to be updated
+    const [targetMember] = await db.select()
+      .from(communityMembers)
+      .where(eq(communityMembers.id, id))
+      .limit(1);
+
+    if (!targetMember) {
+      return null;
+    }
+
+    // Check if requesting user is owner or moderator of the community
+    const requestMember = await CommunityMemberService.getMemberByUserAndCommunity(requestUserId, targetMember.communityId);
+    if (!requestMember || !['owner', 'moderator'].includes(requestMember.role)) {
+      throw new Error('Unauthorized: Only owners and moderators can update member roles');
+    }
+
+    // Only owners can make someone else an owner
+    if (data.role === 'owner' && requestMember.role !== 'owner') {
+      throw new Error('Unauthorized: Only owners can assign owner role');
+    }
+
     const [member] = await db.update(communityMembers)
       .set(data)
       .where(eq(communityMembers.id, id))
@@ -365,7 +422,30 @@ export class CommunityMemberService {
   }
 
   // Remove Member from Community
-  static async removeMember(id: string) {
+  static async removeMember(id: string, requestUserId: string) {
+    // Get the member to be removed
+    const [targetMember] = await db.select()
+      .from(communityMembers)
+      .where(eq(communityMembers.id, id))
+      .limit(1);
+
+    if (!targetMember) {
+      return null;
+    }
+
+    // Check if requesting user is removing themselves or is owner/moderator
+    const requestMember = await CommunityMemberService.getMemberByUserAndCommunity(requestUserId, targetMember.communityId);
+
+    // Users can remove themselves, owners can remove anyone, moderators can remove non-owners
+    const canRemove =
+      targetMember.userId === requestUserId || // removing themselves
+      (requestMember && requestMember.role === 'owner') || // owner removing anyone
+      (requestMember && requestMember.role === 'moderator' && targetMember.role !== 'owner'); // moderator removing non-owner
+
+    if (!canRemove) {
+      throw new Error('Unauthorized: You cannot remove this member');
+    }
+
     const [member] = await db.delete(communityMembers)
       .where(eq(communityMembers.id, id))
       .returning();

@@ -5,3 +5,5 @@ export * from './use-courses';
 export * from './use-modules';
 export * from './use-materials';
 export * from './use-quizzes';
+export * from './use-posts';
+export * from './use-comments';

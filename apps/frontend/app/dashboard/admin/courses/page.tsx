@@ -44,6 +44,7 @@ import { useCourses, useDeleteCourse } from "@/hooks/use-courses"
 import { useCommunities } from "@/hooks/use-communities"
 import { Course } from "@/lib/types"
 import { toast } from "sonner"
+import { useSession } from "@/lib/auth"
 
 export default function CoursesPage() {
   const [search, setSearch] = useState("")
@@ -51,8 +52,18 @@ export default function CoursesPage() {
   const [selectedCommunity, setSelectedCommunity] = useState<string>("all")
   const limit = 10
 
-  const { data: communitiesData } = useCommunities(1, 100) // Get all communities for filter
-  const { data, isLoading, error } = useCourses(page, limit, selectedCommunity === "all" ? {} : { communityId: selectedCommunity })
+  const { data: session } = useSession()
+  const userId = session?.user?.id
+
+  const { data: communitiesData } = useCommunities(1, 100, { createdBy: userId }) // Get user's communities for filter
+
+  // Build filters object - always filter by current user as instructor
+  const filters: any = { instructorId: userId }
+  if (selectedCommunity !== "all") {
+    filters.communityId = selectedCommunity
+  }
+
+  const { data, isLoading, error } = useCourses(page, limit, filters)
   const deleteCourseMutation = useDeleteCourse()
 
   const handleDelete = async (course: Course) => {

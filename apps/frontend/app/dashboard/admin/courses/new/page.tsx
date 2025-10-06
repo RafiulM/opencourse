@@ -24,6 +24,7 @@ import { useCreateCourse } from "@/hooks/use-courses"
 import { useCommunities } from "@/hooks/use-communities"
 import { CreateCourseRequest } from "@/lib/types"
 import { toast } from "sonner"
+import { useSession } from "@/lib/auth"
 
 const createCourseSchema = z.object({
   communityId: z.string().min(1, "Community is required"),
@@ -47,7 +48,9 @@ export default function NewCoursePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const createCourseMutation = useCreateCourse()
-  const { data: communitiesData } = useCommunities(1, 100)
+  const { data: session } = useSession()
+  const userId = session?.user?.id
+  const { data: communitiesData } = useCommunities(1, 100, { createdBy: userId })
 
   const {
     register,

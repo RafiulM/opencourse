@@ -257,3 +257,214 @@ export interface UpdateQuizRequest extends Partial<CreateQuizRequest> {
   id: string;
   isPublished?: boolean;
 }
+
+// Social Posts Types
+export interface PostAttachment {
+  id: string;
+  uploadId: string;
+  type: 'image' | 'video' | 'file' | 'audio' | 'document';
+  title?: string;
+  description?: string;
+  caption?: string;
+  order: number;
+  isPrimary: boolean;
+  upload?: Upload;
+}
+
+export interface Post {
+  id: string;
+  title: string;
+  content: string;
+  excerpt?: string;
+  slug?: string;
+  postType: 'general' | 'announcement' | 'discussion' | 'resource';
+  communityId: string;
+  authorId: string;
+  isPublished: boolean;
+  isPinned: boolean;
+  isFeatured: boolean;
+  allowComments: boolean;
+  likesCount: number;
+  commentsCount: number;
+  viewsCount: number;
+  tags?: string[];
+  attachments?: PostAttachment[];
+  publishedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  author?: User;
+  community?: Community;
+  userInteraction?: {
+    liked: boolean;
+    canEdit: boolean;
+    canDelete: boolean;
+    canModerate: boolean;
+  };
+}
+
+export interface PostQueryOptions {
+  page?: number;
+  pageSize?: number;
+  filters?: {
+    communityId?: string;
+    authorId?: string;
+    postType?: string;
+    isPublished?: boolean;
+    isPinned?: boolean;
+    isFeatured?: boolean;
+    tags?: string[];
+  };
+  search?: string;
+  sort?: Array<{
+    field: string;
+    order: 'asc' | 'desc';
+  }>;
+}
+
+export interface CreatePostRequest {
+  title: string;
+  content: string;
+  excerpt?: string;
+  slug?: string;
+  postType?: 'general' | 'announcement' | 'discussion' | 'resource';
+  tags?: string[];
+  allowComments?: boolean;
+  isPublished?: boolean;
+  attachments?: Array<{
+    uploadId: string;
+    type: 'image' | 'video' | 'file' | 'audio' | 'document';
+    title?: string;
+    description?: string;
+    caption?: string;
+    order: number;
+    isPrimary?: boolean;
+  }>;
+}
+
+export interface UpdatePostRequest extends Partial<CreatePostRequest> {
+  id: string;
+}
+
+export interface CreateCommunityPostRequest extends CreatePostRequest {
+  communityId: string;
+}
+
+// Comments Types
+export interface Comment {
+  id: string;
+  content: string;
+  postId: string;
+  authorId: string;
+  parentId?: string;
+  isEdited: boolean;
+  isDeleted: boolean;
+  isReported: boolean;
+  reportsCount: number;
+  likesCount: number;
+  repliesCount: number;
+  createdAt: string;
+  updatedAt: string;
+  author?: User;
+  userInteraction?: {
+    liked: boolean;
+    canEdit: boolean;
+    canDelete: boolean;
+    canModerate: boolean;
+  };
+  replies?: Comment[];
+}
+
+export interface CommentQueryOptions {
+  page?: number;
+  pageSize?: number;
+  sortBy?: 'createdAt' | 'likesCount' | 'updatedAt';
+  sortOrder?: 'asc' | 'desc';
+  includeReplies?: boolean;
+}
+
+export interface CreateCommentRequest {
+  content: string;
+  parentId?: string;
+}
+
+export interface UpdateCommentRequest {
+  id: string;
+  content: string;
+}
+
+export interface ReportCommentRequest {
+  reason?: string;
+}
+
+export interface ModerateCommentRequest {
+  action: 'delete' | 'restore' | 'clear_report';
+  reason?: string;
+}
+
+export interface CreateReplyRequest {
+  content: string;
+}
+
+// Enhanced Response Types for Posts and Comments
+export interface PostListResponse {
+  success: boolean;
+  data: {
+    posts: Post[];
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalItems: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  };
+  message: string;
+}
+
+export interface CommentListResponse {
+  success: boolean;
+  data: {
+    comments: Comment[];
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalItems: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  };
+  message: string;
+}
+
+export interface PostLikeResponse {
+  success: boolean;
+  data: {
+    liked: boolean;
+    likesCount: number;
+  };
+  message: string;
+}
+
+export interface PostLikesResponse {
+  success: boolean;
+  data: {
+    likes: Array<{
+      user: User;
+      createdAt: string;
+    }>;
+    totalCount: number;
+    totalPages: number;
+    currentPage: number;
+    pageSize: number;
+  };
+  message: string;
+}
+
+export interface CommentLikeResponse {
+  success: boolean;
+  data: {
+    liked: boolean;
+    likesCount: number;
+  };
+  message: string;
+}

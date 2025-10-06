@@ -6,3 +6,5 @@ export * from './enrollment';
 export * from './quiz';
 export * from './scoreboard';
 export * from './uploads';
+export * from './posts';
+export * from './comments';

@@ -147,6 +147,304 @@ export const validatePaginationParams = (page?: any, pageSize?: any) => {
   }
 };
 
+// Post validation functions
+export const validateCreatePostData = (data: any) => {
+  const errors: string[] = [];
+
+  if (!data.communityId || typeof data.communityId !== 'string') {
+    errors.push('Community ID is required and must be a string');
+  }
+
+  if (data.title !== undefined) {
+    if (typeof data.title !== 'string') {
+      errors.push('Title must be a string');
+    } else if (data.title.trim().length > 255) {
+      errors.push('Title must be less than 255 characters');
+    }
+  }
+
+  if (data.content !== undefined) {
+    if (typeof data.content !== 'string') {
+      errors.push('Content must be a string');
+    } else if (data.content.length > 50000) {
+      errors.push('Content must be less than 50,000 characters');
+    }
+  }
+
+  if (data.excerpt !== undefined) {
+    if (typeof data.excerpt !== 'string') {
+      errors.push('Excerpt must be a string');
+    } else if (data.excerpt.length > 500) {
+      errors.push('Excerpt must be less than 500 characters');
+    }
+  }
+
+  if (data.postType !== undefined) {
+    const validTypes = ['general', 'announcement', 'discussion', 'resource'];
+    if (!validTypes.includes(data.postType)) {
+      errors.push('Post type must be one of: general, announcement, discussion, resource');
+    }
+  }
+
+  if (data.slug !== undefined) {
+    if (typeof data.slug !== 'string') {
+      errors.push('Slug must be a string');
+    } else if (data.slug.length > 255) {
+      errors.push('Slug must be less than 255 characters');
+    } else if (!/^[a-z0-9-_]+$/.test(data.slug)) {
+      errors.push('Slug can only contain lowercase letters, numbers, hyphens, and underscores');
+    }
+  }
+
+  if (data.tags !== undefined) {
+    if (!Array.isArray(data.tags)) {
+      errors.push('Tags must be an array');
+    } else {
+      for (const tag of data.tags) {
+        if (typeof tag !== 'string') {
+          errors.push('All tags must be strings');
+        } else if (tag.length > 50) {
+          errors.push('Each tag must be less than 50 characters');
+        }
+      }
+      if (data.tags.length > 10) {
+        errors.push('Maximum 10 tags allowed');
+      }
+    }
+  }
+
+  if (data.allowComments !== undefined && typeof data.allowComments !== 'boolean') {
+    errors.push('Allow comments must be a boolean');
+  }
+
+  if (data.isPublished !== undefined && typeof data.isPublished !== 'boolean') {
+    errors.push('Is published must be a boolean');
+  }
+
+  if (data.attachments !== undefined) {
+    if (!Array.isArray(data.attachments)) {
+      errors.push('Attachments must be an array');
+    } else {
+      for (const attachment of data.attachments) {
+        if (!attachment.uploadId || typeof attachment.uploadId !== 'string') {
+          errors.push('Each attachment must have a valid uploadId');
+        }
+
+        if (attachment.type && !['image', 'video', 'file', 'audio', 'document'].includes(attachment.type)) {
+          errors.push('Attachment type must be one of: image, video, file, audio, document');
+        }
+
+        if (attachment.title !== undefined && typeof attachment.title === 'string' && attachment.title.length > 255) {
+          errors.push('Attachment title must be less than 255 characters');
+        }
+
+        if (attachment.description !== undefined && typeof attachment.description === 'string' && attachment.description.length > 1000) {
+          errors.push('Attachment description must be less than 1,000 characters');
+        }
+
+        if (attachment.caption !== undefined && typeof attachment.caption === 'string' && attachment.caption.length > 500) {
+          errors.push('Attachment caption must be less than 500 characters');
+        }
+
+        if (attachment.order !== undefined && (typeof attachment.order !== 'number' || attachment.order < 0)) {
+          errors.push('Attachment order must be a non-negative number');
+        }
+
+        if (attachment.isPrimary !== undefined && typeof attachment.isPrimary !== 'boolean') {
+          errors.push('Attachment isPrimary must be a boolean');
+        }
+      }
+
+      if (data.attachments.length > 10) {
+        errors.push('Maximum 10 attachments allowed per post');
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    throw createValidationError(errors.join(', '));
+  }
+};
+
+export const validateUpdatePostData = (data: any) => {
+  const errors: string[] = [];
+
+  if (data.title !== undefined) {
+    if (typeof data.title !== 'string') {
+      errors.push('Title must be a string');
+    } else if (data.title.trim().length > 255) {
+      errors.push('Title must be less than 255 characters');
+    }
+  }
+
+  if (data.content !== undefined) {
+    if (typeof data.content !== 'string') {
+      errors.push('Content must be a string');
+    } else if (data.content.length > 50000) {
+      errors.push('Content must be less than 50,000 characters');
+    }
+  }
+
+  if (data.excerpt !== undefined) {
+    if (typeof data.excerpt !== 'string') {
+      errors.push('Excerpt must be a string');
+    } else if (data.excerpt.length > 500) {
+      errors.push('Excerpt must be less than 500 characters');
+    }
+  }
+
+  if (data.slug !== undefined) {
+    if (typeof data.slug !== 'string') {
+      errors.push('Slug must be a string');
+    } else if (data.slug.length > 255) {
+      errors.push('Slug must be less than 255 characters');
+    } else if (!/^[a-z0-9-_]+$/.test(data.slug)) {
+      errors.push('Slug can only contain lowercase letters, numbers, hyphens, and underscores');
+    }
+  }
+
+  if (data.tags !== undefined) {
+    if (!Array.isArray(data.tags)) {
+      errors.push('Tags must be an array');
+    } else {
+      for (const tag of data.tags) {
+        if (typeof tag !== 'string') {
+          errors.push('All tags must be strings');
+        } else if (tag.length > 50) {
+          errors.push('Each tag must be less than 50 characters');
+        }
+      }
+      if (data.tags.length > 10) {
+        errors.push('Maximum 10 tags allowed');
+      }
+    }
+  }
+
+  if (data.allowComments !== undefined && typeof data.allowComments !== 'boolean') {
+    errors.push('Allow comments must be a boolean');
+  }
+
+  if (data.isPublished !== undefined && typeof data.isPublished !== 'boolean') {
+    errors.push('Is published must be a boolean');
+  }
+
+  if (errors.length > 0) {
+    throw createValidationError(errors.join(', '));
+  }
+};
+
+// Comment validation functions
+export const validateCreateCommentData = (data: any) => {
+  const errors: string[] = [];
+
+  if (!data.content || typeof data.content !== 'string') {
+    errors.push('Content is required and must be a string');
+  } else if (data.content.trim().length < 1) {
+    errors.push('Content cannot be empty');
+  } else if (data.content.length > 2000) {
+    errors.push('Content must be less than 2,000 characters');
+  }
+
+  if (data.parentId !== undefined && typeof data.parentId !== 'string') {
+    errors.push('Parent ID must be a string');
+  }
+
+  if (errors.length > 0) {
+    throw createValidationError(errors.join(', '));
+  }
+};
+
+export const validateUpdateCommentData = (data: any) => {
+  const errors: string[] = [];
+
+  if (!data.content || typeof data.content !== 'string') {
+    errors.push('Content is required and must be a string');
+  } else if (data.content.trim().length < 1) {
+    errors.push('Content cannot be empty');
+  } else if (data.content.length > 2000) {
+    errors.push('Content must be less than 2,000 characters');
+  }
+
+  if (errors.length > 0) {
+    throw createValidationError(errors.join(', '));
+  }
+};
+
+// Query validation functions for posts and comments
+export const validatePostQueryOptions = (query: any) => {
+  const errors: string[] = [];
+
+  if (query.authorId && typeof query.authorId !== 'string') {
+    errors.push('Author ID must be a string');
+  }
+
+  if (query.communityId && typeof query.communityId !== 'string') {
+    errors.push('Community ID must be a string');
+  }
+
+  if (query.postType && !['general', 'announcement', 'discussion', 'resource'].includes(query.postType)) {
+    errors.push('Post type must be one of: general, announcement, discussion, resource');
+  }
+
+  if (query.isPinned !== undefined && query.isPinned !== 'true' && query.isPinned !== 'false') {
+    errors.push('Is pinned must be true or false');
+  }
+
+  if (query.isFeatured !== undefined && query.isFeatured !== 'true' && query.isFeatured !== 'false') {
+    errors.push('Is featured must be true or false');
+  }
+
+  if (query.isPublished !== undefined && query.isPublished !== 'true' && query.isPublished !== 'false') {
+    errors.push('Is published must be true or false');
+  }
+
+  if (query.tags && typeof query.tags === 'string') {
+    const tags = query.tags.split(',').map((t: string) => t.trim());
+    if (tags.length > 10) {
+      errors.push('Maximum 10 tags allowed for filtering');
+    }
+  }
+
+  if (errors.length > 0) {
+    throw createValidationError(errors.join(', '));
+  }
+};
+
+export const validateCommentQueryOptions = (query: any) => {
+  const errors: string[] = [];
+
+  if (query.authorId && typeof query.authorId !== 'string') {
+    errors.push('Author ID must be a string');
+  }
+
+  if (query.parentId && typeof query.parentId !== 'string') {
+    errors.push('Parent ID must be a string');
+  }
+
+  if (query.level !== undefined) {
+    const level = parseInt(query.level);
+    if (isNaN(level) || level < 0 || level > 10) {
+      errors.push('Level must be a number between 0 and 10');
+    }
+  }
+
+  if (query.isPinned !== undefined && query.isPinned !== 'true' && query.isPinned !== 'false') {
+    errors.push('Is pinned must be true or false');
+  }
+
+  if (query.isDeleted !== undefined && query.isDeleted !== 'true' && query.isDeleted !== 'false') {
+    errors.push('Is deleted must be true or false');
+  }
+
+  if (query.isReported !== undefined && query.isReported !== 'true' && query.isReported !== 'false') {
+    errors.push('Is reported must be true or false');
+  }
+
+  if (errors.length > 0) {
+    throw createValidationError(errors.join(', '));
+  }
+};
+
 // Advanced query validation and parsing
 export interface QueryFilters {
   [key: string]: any;

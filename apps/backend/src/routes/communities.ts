@@ -1,9 +1,9 @@
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
 import { CommunityService, CommunityMemberService } from '../services/community';
-import { AppError, formatErrorResponse, handleDatabaseError } from '../lib/errors';
-import { 
-  validateCommunityData, 
-  validateCommunityUpdateData, 
+import { AppError, formatErrorResponse, handleDatabaseError, ErrorType } from '../lib/errors';
+import {
+  validateCommunityData,
+  validateCommunityUpdateData,
   validateAddMemberData,
   validatePaginationParams,
   validateCommunityQueryOptions
@@ -235,14 +235,14 @@ router.get('/my', authenticate, async (req, res) => {
  */
 router.get('/:id', optionalAuth, async (req, res) => {
   try {
-    const community = await CommunityService.getCommunityById(req.params.id);
+    const community = await CommunityService.getCommunityById(req.params.id, req.user?.id);
     if (!community) {
       const errorResponse = formatErrorResponse(
         new AppError('Community not found', 404, 'RESOURCE_NOT_FOUND' as any)
       );
       return res.status(404).json(errorResponse);
     }
-    
+
     res.json({
       success: true,
       data: community
@@ -252,7 +252,15 @@ router.get('/:id', optionalAuth, async (req, res) => {
       const errorResponse = formatErrorResponse(error);
       return res.status(error.statusCode).json(errorResponse);
     }
-    
+
+    // Handle authorization errors from service layer
+    if (error instanceof Error && error.message.includes('Unauthorized')) {
+      const errorResponse = formatErrorResponse(
+        new AppError(error.message, 403, ErrorType.FORBIDDEN)
+      );
+      return res.status(403).json(errorResponse);
+    }
+
     const dbError = handleDatabaseError(error);
     const errorResponse = formatErrorResponse(dbError);
     res.status(dbError.statusCode).json(errorResponse);
@@ -279,14 +287,14 @@ router.get('/:id', optionalAuth, async (req, res) => {
  */
 router.get('/slug/:slug', optionalAuth, async (req, res) => {
   try {
-    const community = await CommunityService.getCommunityBySlug(req.params.slug);
+    const community = await CommunityService.getCommunityBySlug(req.params.slug, req.user?.id);
     if (!community) {
       const errorResponse = formatErrorResponse(
         new AppError('Community not found', 404, 'RESOURCE_NOT_FOUND' as any)
       );
       return res.status(404).json(errorResponse);
     }
-    
+
     res.json({
       success: true,
       data: community
@@ -296,7 +304,15 @@ router.get('/slug/:slug', optionalAuth, async (req, res) => {
       const errorResponse = formatErrorResponse(error);
       return res.status(error.statusCode).json(errorResponse);
     }
-    
+
+    // Handle authorization errors from service layer
+    if (error instanceof Error && error.message.includes('Unauthorized')) {
+      const errorResponse = formatErrorResponse(
+        new AppError(error.message, 403, ErrorType.FORBIDDEN)
+      );
+      return res.status(403).json(errorResponse);
+    }
+
     const dbError = handleDatabaseError(error);
     const errorResponse = formatErrorResponse(dbError);
     res.status(dbError.statusCode).json(errorResponse);
@@ -348,17 +364,15 @@ router.get('/slug/:slug', optionalAuth, async (req, res) => {
 router.put('/:id', authenticate, async (req, res) => {
   try {
     validateCommunityUpdateData(req.body);
-    
-    // TODO: Add ownership check - only community creator or owners should be able to update
-    
-    const community = await CommunityService.updateCommunity(req.params.id, req.body);
+
+    const community = await CommunityService.updateCommunity(req.params.id, req.body, req.user!.id);
     if (!community) {
       const errorResponse = formatErrorResponse(
         new AppError('Community not found', 404, 'RESOURCE_NOT_FOUND' as any)
       );
       return res.status(404).json(errorResponse);
     }
-    
+
     res.json({
       success: true,
       data: community,
@@ -369,7 +383,15 @@ router.put('/:id', authenticate, async (req, res) => {
       const errorResponse = formatErrorResponse(error);
       return res.status(error.statusCode).json(errorResponse);
     }
-    
+
+    // Handle authorization errors from service layer
+    if (error instanceof Error && error.message.includes('Unauthorized')) {
+      const errorResponse = formatErrorResponse(
+        new AppError(error.message, 403, ErrorType.FORBIDDEN)
+      );
+      return res.status(403).json(errorResponse);
+    }
+
     const dbError = handleDatabaseError(error);
     const errorResponse = formatErrorResponse(dbError);
     res.status(dbError.statusCode).json(errorResponse);
@@ -396,16 +418,14 @@ router.put('/:id', authenticate, async (req, res) => {
  */
 router.delete('/:id', authenticate, async (req, res) => {
   try {
-    // TODO: Add ownership check - only community creator should be able to delete
-    
-    const community = await CommunityService.deleteCommunity(req.params.id);
+    const community = await CommunityService.deleteCommunity(req.params.id, req.user!.id);
     if (!community) {
       const errorResponse = formatErrorResponse(
         new AppError('Community not found', 404, 'RESOURCE_NOT_FOUND' as any)
       );
       return res.status(404).json(errorResponse);
     }
-    
+
     res.json({
       success: true,
       data: community,
@@ -416,7 +436,15 @@ router.delete('/:id', authenticate, async (req, res) => {
       const errorResponse = formatErrorResponse(error);
       return res.status(error.statusCode).json(errorResponse);
     }
-    
+
+    // Handle authorization errors from service layer
+    if (error instanceof Error && error.message.includes('Unauthorized')) {
+      const errorResponse = formatErrorResponse(
+        new AppError(error.message, 403, ErrorType.FORBIDDEN)
+      );
+      return res.status(403).json(errorResponse);
+    }
+
     const dbError = handleDatabaseError(error);
     const errorResponse = formatErrorResponse(dbError);
     res.status(dbError.statusCode).json(errorResponse);
@@ -619,17 +647,15 @@ router.put('/:id/members/:memberId', authenticate, async (req, res) => {
       );
       return res.status(400).json(errorResponse);
     }
-    
-    // TODO: Add permission check - only owners/moderators should be able to update roles
-    
-    const member = await CommunityMemberService.updateMemberRole(req.params.memberId, req.body);
+
+    const member = await CommunityMemberService.updateMemberRole(req.params.memberId, req.body, req.user!.id);
     if (!member) {
       const errorResponse = formatErrorResponse(
         new AppError('Member not found', 404, 'RESOURCE_NOT_FOUND' as any)
       );
       return res.status(404).json(errorResponse);
     }
-    
+
     res.json({
       success: true,
       data: member,
@@ -640,7 +666,15 @@ router.put('/:id/members/:memberId', authenticate, async (req, res) => {
       const errorResponse = formatErrorResponse(error);
       return res.status(error.statusCode).json(errorResponse);
     }
-    
+
+    // Handle authorization errors from service layer
+    if (error instanceof Error && error.message.includes('Unauthorized')) {
+      const errorResponse = formatErrorResponse(
+        new AppError(error.message, 403, ErrorType.FORBIDDEN)
+      );
+      return res.status(403).json(errorResponse);
+    }
+
     const dbError = handleDatabaseError(error);
     const errorResponse = formatErrorResponse(dbError);
     res.status(dbError.statusCode).json(errorResponse);
@@ -670,17 +704,14 @@ router.put('/:id/members/:memberId', authenticate, async (req, res) => {
  */
 router.delete('/:id/members/:memberId', authenticate, async (req, res) => {
   try {
-    // TODO: Add permission check - only owners/moderators should be able to remove members
-    // Users should be able to remove themselves (leave community)
-    
-    const member = await CommunityMemberService.removeMember(req.params.memberId);
+    const member = await CommunityMemberService.removeMember(req.params.memberId, req.user!.id);
     if (!member) {
       const errorResponse = formatErrorResponse(
         new AppError('Member not found', 404, 'RESOURCE_NOT_FOUND' as any)
       );
       return res.status(404).json(errorResponse);
     }
-    
+
     res.json({
       success: true,
       data: member,
@@ -691,7 +722,15 @@ router.delete('/:id/members/:memberId', authenticate, async (req, res) => {
       const errorResponse = formatErrorResponse(error);
       return res.status(error.statusCode).json(errorResponse);
     }
-    
+
+    // Handle authorization errors from service layer
+    if (error instanceof Error && error.message.includes('Unauthorized')) {
+      const errorResponse = formatErrorResponse(
+        new AppError(error.message, 403, ErrorType.FORBIDDEN)
+      );
+      return res.status(403).json(errorResponse);
+    }
+
     const dbError = handleDatabaseError(error);
     const errorResponse = formatErrorResponse(dbError);
     res.status(dbError.statusCode).json(errorResponse);

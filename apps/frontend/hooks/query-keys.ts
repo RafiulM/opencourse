@@ -57,10 +57,37 @@ export const queryKeys = {
   leaderboards: {
     all: ['leaderboards'] as const,
     communityLists: () => [...queryKeys.leaderboards.all, 'community'] as const,
-    communityList: (communityId: string, params: { page?: number; limit?: number; filters?: Record<string, any>; sort?: string[] }) => 
+    communityList: (communityId: string, params: { page?: number; limit?: number; filters?: Record<string, any>; sort?: string[] }) =>
       [...queryKeys.leaderboards.communityLists(), communityId, params] as const,
     courseLists: () => [...queryKeys.leaderboards.all, 'course'] as const,
-    courseList: (courseId: string, params: { page?: number; limit?: number; filters?: Record<string, any>; sort?: string[] }) => 
+    courseList: (courseId: string, params: { page?: number; limit?: number; filters?: Record<string, any>; sort?: string[] }) =>
       [...queryKeys.leaderboards.courseLists(), courseId, params] as const,
+  },
+  posts: {
+    all: ['posts'] as const,
+    lists: () => [...queryKeys.posts.all, 'list'] as const,
+    list: (params: { page?: number; pageSize?: number; filters?: any; search?: string; sort?: any }) =>
+      [...queryKeys.posts.lists(), params] as const,
+    details: () => [...queryKeys.posts.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.posts.details(), id] as const,
+    communityLists: () => [...queryKeys.posts.all, 'community'] as const,
+    communityList: (communityId: string, params: { page?: number; pageSize?: number; filters?: any; search?: string; sort?: any }) =>
+      [...queryKeys.posts.communityLists(), communityId, params] as const,
+    featured: (communityId: string, params: { page?: number; pageSize?: number }) =>
+      [...queryKeys.posts.communityLists(), communityId, 'featured', params] as const,
+    pinned: (communityId: string, params: { page?: number; pageSize?: number }) =>
+      [...queryKeys.posts.communityLists(), communityId, 'pinned', params] as const,
+    announcements: (communityId: string, params: { page?: number; pageSize?: number }) =>
+      [...queryKeys.posts.communityLists(), communityId, 'announcements', params] as const,
+    likes: (id: string, params: { page?: number; pageSize?: number }) =>
+      [...queryKeys.posts.details(), id, 'likes', params] as const,
+  },
+  comments: {
+    all: ['comments'] as const,
+    lists: () => [...queryKeys.comments.all, 'list'] as const,
+    list: (postId: string, params: { page?: number; pageSize?: number; sortBy?: string; sortOrder?: string; includeReplies?: boolean }) =>
+      [...queryKeys.comments.lists(), postId, params] as const,
+    details: () => [...queryKeys.comments.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.comments.details(), id] as const,
   },
 };

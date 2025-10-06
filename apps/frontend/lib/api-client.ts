@@ -19,6 +19,23 @@ import {
   Enrollment,
   Upload,
   LeaderboardEntry,
+  Post,
+  Comment,
+  PostQueryOptions,
+  CommentQueryOptions,
+  CreatePostRequest,
+  UpdatePostRequest,
+  CreateCommunityPostRequest,
+  CreateCommentRequest,
+  UpdateCommentRequest,
+  ReportCommentRequest,
+  ModerateCommentRequest,
+  CreateReplyRequest,
+  PostListResponse,
+  CommentListResponse,
+  PostLikeResponse,
+  PostLikesResponse,
+  CommentLikeResponse,
 } from './types';
 
 interface ApiClientConfig {
@@ -535,8 +552,219 @@ export class ApiClient {
     if (sort.length > 0) {
       params.set('sort', sort.join(','));
     }
-    
+  
     return this.request<PaginatedResponse<LeaderboardEntry>>(`/scoreboard/courses/${courseId}/leaderboard?${params}`);
+  }
+
+  // Social Posts API
+
+  // Global Posts (Admin/Mod use)
+  async getPosts(options: PostQueryOptions = {}): Promise<PostListResponse> {
+    const params = new URLSearchParams();
+
+    if (options.page !== undefined) params.set('page', options.page.toString());
+    if (options.pageSize !== undefined) params.set('pageSize', options.pageSize.toString());
+
+    // Add filter parameters
+    if (options.filters) {
+      Object.entries(options.filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          if (Array.isArray(value)) {
+            params.set(key, value.join(','));
+          } else if (typeof value === 'boolean') {
+            params.set(key, value.toString());
+          } else {
+            params.set(key, String(value));
+          }
+        }
+      });
+    }
+
+    if (options.search) params.set('search', options.search);
+
+    if (options.sort && options.sort.length > 0) {
+      const sortStrings = options.sort.map(s => `${s.field}:${s.order}`);
+      params.set('sort', sortStrings.join(','));
+    }
+
+    return this.request<PostListResponse>(`/posts?${params}`);
+  }
+
+  async getPost(id: string): Promise<ApiResponse<Post>> {
+    return this.request<ApiResponse<Post>>(`/posts/${id}`);
+  }
+
+  async updatePost(data: UpdatePostRequest): Promise<ApiResponse<Post>> {
+    return this.request<ApiResponse<Post>>(`/posts/${data.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deletePost(id: string): Promise<ApiResponse<void>> {
+    return this.request<ApiResponse<void>>(`/posts/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async publishPost(id: string): Promise<ApiResponse<Post>> {
+    return this.request<ApiResponse<Post>>(`/posts/${id}/publish`, {
+      method: 'POST',
+    });
+  }
+
+  async togglePinPost(id: string): Promise<ApiResponse<{ isPinned: boolean }>> {
+    return this.request<ApiResponse<{ isPinned: boolean }>>(`/posts/${id}/pin`, {
+      method: 'POST',
+    });
+  }
+
+  async toggleFeaturePost(id: string): Promise<ApiResponse<{ isFeatured: boolean }>> {
+    return this.request<ApiResponse<{ isFeatured: boolean }>>(`/posts/${id}/feature`, {
+      method: 'POST',
+    });
+  }
+
+  async toggleLikePost(id: string): Promise<PostLikeResponse> {
+    return this.request<PostLikeResponse>(`/posts/${id}/like`, {
+      method: 'POST',
+    });
+  }
+
+  async getPostLikes(id: string, page = 1, pageSize = 20): Promise<PostLikesResponse> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+    });
+
+    return this.request<PostLikesResponse>(`/posts/${id}/likes?${params}`);
+  }
+
+  // Community Posts
+  async getCommunityPosts(communityId: string, options: Omit<PostQueryOptions, 'filters'> & { filters?: Omit<PostQueryOptions['filters'], 'communityId'> } = {}): Promise<PostListResponse> {
+    const params = new URLSearchParams();
+
+    if (options.page !== undefined) params.set('page', options.page.toString());
+    if (options.pageSize !== undefined) params.set('pageSize', options.pageSize.toString());
+
+    // Add filter parameters (excluding communityId)
+    if (options.filters) {
+      Object.entries(options.filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          if (Array.isArray(value)) {
+            params.set(key, value.join(','));
+          } else if (typeof value === 'boolean') {
+            params.set(key, value.toString());
+          } else {
+            params.set(key, String(value));
+          }
+        }
+      });
+    }
+
+    if (options.search) params.set('search', options.search);
+
+    if (options.sort && options.sort.length > 0) {
+      const sortStrings = options.sort.map(s => `${s.field}:${s.order}`);
+      params.set('sort', sortStrings.join(','));
+    }
+
+    return this.request<PostListResponse>(`/communities/${communityId}/posts?${params}`);
+  }
+
+  async createCommunityPost(communityId: string, data: CreatePostRequest): Promise<ApiResponse<Post>> {
+    const postData = { ...data, communityId };
+    return this.request<ApiResponse<Post>>(`/communities/${communityId}/posts`, {
+      method: 'POST',
+      body: JSON.stringify(postData),
+    });
+  }
+
+  async getFeaturedCommunityPosts(communityId: string, page = 1, pageSize = 10): Promise<PostListResponse> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+    });
+
+    return this.request<PostListResponse>(`/communities/${communityId}/posts/featured?${params}`);
+  }
+
+  async getPinnedCommunityPosts(communityId: string, page = 1, pageSize = 10): Promise<PostListResponse> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+    });
+
+    return this.request<PostListResponse>(`/communities/${communityId}/posts/pinned?${params}`);
+  }
+
+  async getCommunityAnnouncements(communityId: string, page = 1, pageSize = 10): Promise<PostListResponse> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+    });
+
+    return this.request<PostListResponse>(`/communities/${communityId}/posts/announcements?${params}`);
+  }
+
+  // Comments API
+  async getComments(postId: string, options: CommentQueryOptions = {}): Promise<CommentListResponse> {
+    const params = new URLSearchParams();
+
+    if (options.page !== undefined) params.set('page', options.page.toString());
+    if (options.pageSize !== undefined) params.set('pageSize', options.pageSize.toString());
+    if (options.sortBy) params.set('sortBy', options.sortBy);
+    if (options.sortOrder) params.set('sortOrder', options.sortOrder);
+    if (options.includeReplies !== undefined) params.set('includeReplies', options.includeReplies.toString());
+
+    return this.request<CommentListResponse>(`/posts/${postId}/comments?${params}`);
+  }
+
+  async createComment(postId: string, data: CreateCommentRequest): Promise<ApiResponse<Comment>> {
+    return this.request<ApiResponse<Comment>>(`/posts/${postId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateComment(data: UpdateCommentRequest): Promise<ApiResponse<Comment>> {
+    return this.request<ApiResponse<Comment>>(`/comments/${data.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteComment(id: string): Promise<ApiResponse<void>> {
+    return this.request<ApiResponse<void>>(`/comments/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async toggleLikeComment(id: string): Promise<CommentLikeResponse> {
+    return this.request<CommentLikeResponse>(`/comments/${id}/like`, {
+      method: 'POST',
+    });
+  }
+
+  async reportComment(id: string, data: ReportCommentRequest): Promise<ApiResponse<void>> {
+    return this.request<ApiResponse<void>>(`/comments/${id}/report`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async moderateComment(id: string, data: ModerateCommentRequest): Promise<ApiResponse<Comment>> {
+    return this.request<ApiResponse<Comment>>(`/comments/${id}/moderate`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async createReply(commentId: string, data: CreateReplyRequest): Promise<ApiResponse<Comment>> {
+    return this.request<ApiResponse<Comment>>(`/comments/${commentId}/reply`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 }
 

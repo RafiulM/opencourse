@@ -36,13 +36,18 @@ import Link from "next/link"
 import { useCommunities, useDeleteCommunity } from "@/hooks/use-communities"
 import { Community } from "@/lib/types"
 import { toast } from "sonner"
+import { useSession } from "@/lib/auth"
 
 export default function CommunitiesPage() {
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
   const limit = 10
 
-  const { data, isLoading, error } = useCommunities(page, limit)
+  const { data: session } = useSession()
+  const userId = session?.user?.id
+
+  // Only show communities created by the current user
+  const { data, isLoading, error } = useCommunities(page, limit, { createdBy: userId })
   const deleteCommunityMutation = useDeleteCommunity()
 
   const handleDelete = async (community: Community) => {

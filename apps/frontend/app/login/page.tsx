@@ -24,13 +24,27 @@ export default function LoginPage() {
     setError("")
 
     try {
-      await signIn.email({
+      const result = await signIn.email({
         email,
-        password
+        password,
+        callbackURL: "/"
       })
-      router.push("/")
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to sign in")
+
+      if (result.error) {
+        setError(result.error.message || "Invalid email or password")
+      } else if (result.data) {
+        router.push("/")
+      }
+    } catch (err: any) {
+      if (err.status === 401) {
+        setError("Invalid email or password")
+      } else if (err.status === 429) {
+        setError("Too many login attempts. Please try again later.")
+      } else if (err.status === 500) {
+        setError("Server error. Please try again later.")
+      } else {
+        setError(err.message || "Failed to sign in. Please check your credentials and try again.")
+      }
     } finally {
       setLoading(false)
     }

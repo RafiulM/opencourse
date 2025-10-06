@@ -5,14 +5,15 @@ import { courses, courseModules, courseMaterials } from "./course";
 import { relations } from "drizzle-orm";
 
 export const uploadTypeEnum = pgEnum('upload_type', [
-  'community_avatar', 
-  'community_banner', 
-  'course_thumbnail', 
+  'community_avatar',
+  'community_banner',
+  'course_thumbnail',
   'module_thumbnail',
-  'material_video', 
-  'material_file', 
+  'material_video',
+  'material_file',
   'material_document',
-  'user_avatar'
+  'user_avatar',
+  'post_attachment'
 ]);
 
 export const uploadStatusEnum = pgEnum('upload_status', [

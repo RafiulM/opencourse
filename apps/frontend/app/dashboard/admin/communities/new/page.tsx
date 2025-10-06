@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -41,11 +41,29 @@ export default function NewCommunityPage() {
       .replace(/(^-|-$)/g, '')
   }
 
+  // Debounced slug generation
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (formData.name && !formData.slug) {
+        const newSlug = generateSlug(formData.name)
+        setFormData(prev => ({ ...prev, slug: newSlug }))
+      }
+    }, 500) // 500ms delay
+
+    return () => clearTimeout(timer)
+  }, [formData.name])
+
   const handleNameChange = (name: string) => {
     setFormData(prev => ({
       ...prev,
-      name,
-      slug: prev.slug || generateSlug(name)
+      name
+    }))
+  }
+
+  const handleSlugChange = (slug: string) => {
+    setFormData(prev => ({
+      ...prev,
+      slug: generateSlug(slug)
     }))
   }
 
@@ -121,7 +139,7 @@ export default function NewCommunityPage() {
                 <Input
                   id="slug"
                   value={formData.slug}
-                  onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+                  onChange={(e) => handleSlugChange(e.target.value)}
                   placeholder="web-development-bootcamp"
                   className={errors.slug ? "border-red-500" : ""}
                 />

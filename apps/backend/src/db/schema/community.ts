@@ -3,6 +3,7 @@ import { user } from "./auth";
 import { relations } from "drizzle-orm";
 import { courses } from "./course";
 import { uploads } from "./uploads";
+import { posts } from "./posts";
 
 export const communityRoleEnum = pgEnum('community_role', ['owner', 'moderator', 'member']);
 export const communityPrivacyEnum = pgEnum('community_privacy', ['public', 'private', 'invite_only']);
@@ -49,6 +50,7 @@ export const communitiesRelations = relations(communities, ({ one, many }) => ({
     }),
     members: many(communityMembers),
     courses: many(courses),
+    posts: many(posts),
     uploads: many(uploads),
     bannerUpload: one(uploads, {
         fields: [communities.bannerUploadId],

@@ -9,11 +9,14 @@ import {
   IconDatabase,
   IconFileAi,
   IconFileDescription,
+  IconFileText,
   IconFileWord,
   IconFolder,
   IconHelp,
   IconInnerShadowTop,
   IconListDetails,
+  IconMessageCircle,
+  IconPlus,
   IconReport,
   IconSearch,
   IconSettings,
@@ -51,11 +54,6 @@ const data = {
       title: "Courses",
       url: "/dashboard/admin/courses",
       icon: IconFolder,
-    },
-    {
-      title: "Analytics",
-      url: "#",
-      icon: IconChartBar,
     },
   ],
   navClouds: [
@@ -112,16 +110,6 @@ const data = {
       url: "#",
       icon: IconSettings,
     },
-    {
-      title: "Get Help",
-      url: "#",
-      icon: IconHelp,
-    },
-    {
-      title: "Search",
-      url: "#",
-      icon: IconSearch,
-    },
   ],
   documents: [
     {
@@ -135,9 +123,9 @@ const data = {
       icon: IconFolder,
     },
     {
-      name: "Reports",
-      url: "#",
-      icon: IconReport,
+      name: "New Post",
+      url: "/dashboard/admin/posts/new",
+      icon: IconFileText,
     },
   ],
 }
