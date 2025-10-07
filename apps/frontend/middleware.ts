@@ -5,13 +5,15 @@ import { authClient } from "@/lib/auth"
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  const { data } = await authClient.getSession({
+  const session = await authClient.getSession({
     fetchOptions: {
       headers: await headers(),
     },
   })
 
-  if (pathname.startsWith("/dashboard") && !data) {
+  console.log({ session })
+
+  if (pathname.startsWith("/dashboard") && !session.data) {
     return NextResponse.redirect(new URL("/login", request.url))
   }
   return NextResponse.next()
