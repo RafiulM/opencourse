@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -57,17 +57,62 @@ export default function PostsPage() {
   const [page, setPage] = useState(1)
   const limit = 10
 
+  const normalizedPage = useMemo(() => {
+    if (!Number.isFinite(page)) return 1
+    const floored = Math.floor(page)
+    return floored > 0 ? floored : 1
+  }, [page])
+
+  const handlePageChange = useCallback((updater: number | ((current: number) => number)) => {
+    setPage((current) => {
+      const next = typeof updater === "function" ? updater(current) : updater
+      if (!Number.isFinite(next)) return 1
+      const floored = Math.floor(next)
+      return floored > 0 ? floored : 1
+    })
+  }, [])
+
+  useEffect(() => {
+    handlePageChange(1)
+  }, [postType, publishedStatus, search, handlePageChange])
+
   const filters = {
     ...(postType !== "all" && { postType }),
     ...(publishedStatus !== "all" && { isPublished: publishedStatus === "published" }),
   }
 
   const { data, isLoading, error } = usePosts({
-    page: Math.max(1, page), // Ensure page is at least 1
+    page: normalizedPage,
     pageSize: limit,
     filters,
     ...(search && { search })
   })
+
+  const rawResponse = data?.data as any
+  const posts = rawResponse?.posts ?? rawResponse?.data ?? []
+  const rawPagination = rawResponse?.pagination ?? rawResponse
+  const totalItems = rawPagination?.totalItems ?? rawPagination?.totalCount ?? posts.length ?? 0
+  const totalPagesRaw = rawPagination?.totalPages ?? 0
+  const currentPage = rawPagination?.currentPage ?? normalizedPage
+  const pageSize = rawPagination?.pageSize ?? limit
+  const showEmptyState = !isLoading && posts.length === 0
+
+  const errorMessage = useMemo(() => {
+    if (!error) return ""
+    if (error instanceof Error) {
+      const jsonStart = error.message.indexOf("{")
+      if (jsonStart !== -1) {
+        try {
+          const parsed = JSON.parse(error.message.slice(jsonStart))
+          return parsed?.error?.message || error.message
+        } catch (parseError) {
+          return error.message
+        }
+      }
+      return error.message
+    }
+    return "Failed to load posts"
+  }, [error])
 
   const deletePostMutation = useDeletePost()
   const togglePinMutation = useTogglePinPost()
@@ -144,11 +189,16 @@ export default function PostsPage() {
     return (
       <Card>
         <CardContent className="p-6">
-          <p className="text-red-600">Error loading posts: {error.message}</p>
+          <p className="text-red-600">Error loading posts: {errorMessage}</p>
         </CardContent>
       </Card>
     )
   }
+
+  const totalPages = totalPagesRaw || (totalItems > 0 ? Math.max(1, Math.ceil(totalItems / pageSize)) : 0)
+  const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1
+  const endItem = totalItems === 0 ? 0 : Math.min(currentPage * pageSize, totalItems)
+  const disableNext = totalPages === 0 ? true : currentPage >= totalPages
 
   return (
     <div className="space-y-6">
@@ -232,14 +282,28 @@ export default function PostsPage() {
                         Loading posts...
                       </TableCell>
                     </TableRow>
-                  ) : data?.data?.posts?.length === 0 ? (
+                  ) : showEmptyState ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-6">
-                        No posts found
+                      <TableCell colSpan={7}>
+                        <div className="flex flex-col items-center justify-center py-12 text-center gap-4">
+                          <FileText className="h-12 w-12 text-muted-foreground" />
+                          <div className="space-y-1">
+                            <h3 className="text-lg font-semibold">No posts yet</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Create your first post to start engaging your communities.
+                            </p>
+                          </div>
+                          <Link href="/dashboard/admin/posts/new">
+                            <Button>
+                              <Plus className="mr-2 h-4 w-4" />
+                              Create Post
+                            </Button>
+                          </Link>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (
-                    data?.data?.posts?.map((post) => (
+                    posts.map((post) => (
                       <TableRow key={post.id}>
                         <TableCell>
                           <div className="max-w-md">
@@ -312,18 +376,24 @@ export default function PostsPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <Link href={`/communities/${post.communityId}/posts/${post.id}`}>
-                                <DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link
+                                  href={`/communities/${post.community?.slug || post.communityId}/posts/${post.id}`}
+                                  className="flex items-center"
+                                >
                                   <Eye className="mr-2 h-4 w-4" />
                                   View
-                                </DropdownMenuItem>
-                              </Link>
-                              <Link href={`/dashboard/admin/posts/${post.id}/edit`}>
-                                <DropdownMenuItem>
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link
+                                  href={`/dashboard/admin/posts/${post.id}/edit`}
+                                  className="flex items-center"
+                                >
                                   <Edit className="mr-2 h-4 w-4" />
                                   Edit
-                                </DropdownMenuItem>
-                              </Link>
+                                </Link>
+                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 onClick={() => handleTogglePublish(post)}
@@ -375,26 +445,25 @@ export default function PostsPage() {
             </div>
 
             {/* Pagination */}
-            {data?.data?.pagination && (
+            {totalPages > 0 && (
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
-                  Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, data.data.pagination.totalItems)} of{" "}
-                  {data.data.pagination.totalItems} posts
+                  Showing {startItem} to {endItem} of {totalItems} posts
                 </p>
                 <div className="flex items-center space-x-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setPage(page - 1)}
-                    disabled={page <= 1}
+                    onClick={() => handlePageChange((prev) => prev - 1)}
+                    disabled={currentPage <= 1}
                   >
                     Previous
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setPage(page + 1)}
-                    disabled={page >= data.data.pagination.totalPages}
+                    onClick={() => handlePageChange((prev) => prev + 1)}
+                    disabled={disableNext}
                   >
                     Next
                   </Button>

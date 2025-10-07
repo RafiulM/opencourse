@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev --turbopack --port 3050",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint"
@@ -59,8 +59,11 @@
     "react-day-picker": "^9.9.0",
     "react-dom": "19.1.0",
     "react-hook-form": "^7.62.0",
+    "react-markdown": "^10.1.0",
     "react-resizable-panels": "^3.0.5",
     "recharts": "2.15.4",
+    "remark-breaks": "^4.0.0",
+    "remark-gfm": "^4.0.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
     "usehooks-ts": "^3.1.1",

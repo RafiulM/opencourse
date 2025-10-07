@@ -562,8 +562,17 @@ export class ApiClient {
   async getPosts(options: PostQueryOptions = {}): Promise<PostListResponse> {
     const params = new URLSearchParams();
 
-    if (options.page !== undefined) params.set('page', options.page.toString());
-    if (options.pageSize !== undefined) params.set('pageSize', options.pageSize.toString());
+    const page = Number.isFinite(options.page)
+      ? Math.max(1, Math.floor(Number(options.page)))
+      : 1;
+    params.set('page', page.toString());
+
+    if (options.pageSize !== undefined) {
+      const pageSize = Number.isFinite(options.pageSize)
+        ? Math.max(1, Math.floor(Number(options.pageSize)))
+        : 10;
+      params.set('pageSize', pageSize.toString());
+    }
 
     // Add filter parameters
     if (options.filters) {

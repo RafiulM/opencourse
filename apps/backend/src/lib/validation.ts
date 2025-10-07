@@ -125,8 +125,13 @@ export const validateAddMemberData = (data: any) => {
   }
 };
 
-export const validatePaginationParams = (page?: any, pageSize?: any) => {
+export const validatePaginationParams = (pageOrParams?: any, pageSizeParam?: any) => {
   const errors: string[] = [];
+
+  const isQueryObject = pageOrParams && typeof pageOrParams === 'object' && !Array.isArray(pageOrParams);
+  const page = isQueryObject ? pageOrParams.page : pageOrParams;
+
+  const pageSize = isQueryObject ? pageOrParams.pageSize : pageSizeParam;
 
   if (page !== undefined) {
     const pageNum = Number(page);

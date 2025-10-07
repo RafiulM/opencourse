@@ -5,8 +5,11 @@ import Link from "next/link"
 import {
   IconCamera,
   IconChartBar,
+  IconChevronDown,
+  IconChevronRight,
   IconDashboard,
   IconDatabase,
+  IconDeviceLaptop,
   IconFileAi,
   IconFileDescription,
   IconFileText,
@@ -16,10 +19,12 @@ import {
   IconInnerShadowTop,
   IconListDetails,
   IconMessageCircle,
+  IconMoon,
   IconPlus,
   IconReport,
   IconSearch,
   IconSettings,
+  IconSun,
   IconUsers,
 } from "@tabler/icons-react"
 
@@ -35,8 +40,17 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar"
-import { authClient, useSession } from "@/lib/auth"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { useSession } from "@/lib/auth"
+import { useTheme } from "next-themes"
 
 const data = {
   navMain: [
@@ -130,6 +144,82 @@ const data = {
   ],
 }
 
+function SidebarThemeToggle() {
+  const { isMobile } = useSidebar()
+  const { theme, resolvedTheme, setTheme } = useTheme()
+
+  const activeTheme = theme ?? resolvedTheme ?? "system"
+
+  const ActiveIcon = React.useMemo(() => {
+    if (activeTheme === "light") return IconSun
+    if (activeTheme === "dark") return IconMoon
+    return IconDeviceLaptop
+  }, [activeTheme])
+
+  const subtitle = React.useMemo(() => {
+    if (activeTheme === "system") {
+      return `System (${resolvedTheme ?? "light"})`
+    }
+    return activeTheme === "dark" ? "Dark mode" : "Light mode"
+  }, [activeTheme, resolvedTheme])
+
+  return (
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuButton className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground flex-col items-start gap-1">
+              <div className="flex w-full items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ActiveIcon className="size-4" />
+                  <span className="text-sm font-medium leading-none">
+                    Theme
+                  </span>
+                </div>
+                <IconChevronRight className="size-4" />
+              </div>
+              <span className="text-muted-foreground text-xs">{subtitle}</span>
+            </SidebarMenuButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            className="w-48"
+            side={isMobile ? "bottom" : "right"}
+            align={"end"}
+            sideOffset={isMobile ? 8 : 12}
+          >
+            <DropdownMenuRadioGroup
+              value={activeTheme}
+              onValueChange={setTheme}
+            >
+              <DropdownMenuRadioItem
+                value="light"
+                className="flex items-center gap-2"
+              >
+                <IconSun className="size-4" />
+                <span>Light</span>
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem
+                value="dark"
+                className="flex items-center gap-2"
+              >
+                <IconMoon className="size-4" />
+                <span>Dark</span>
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem
+                value="system"
+                className="flex items-center gap-2"
+              >
+                <IconDeviceLaptop className="size-4" />
+                <span>System</span>
+              </DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  )
+}
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { data: session } = useSession()
   const user = session?.user
@@ -157,11 +247,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={{
-          name: user?.name || "",
-          email: user?.email || "",
-          avatar: user?.image || "",
-        }} />
+        <SidebarThemeToggle />
+        <NavUser
+          user={{
+            name: user?.name || "",
+            email: user?.email || "",
+            avatar: user?.image || "",
+          }}
+        />
       </SidebarFooter>
     </Sidebar>
   )
