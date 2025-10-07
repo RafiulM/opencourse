@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense } from "react"
 import {
   Card,
   CardContent,
@@ -26,7 +27,7 @@ import { toast } from "sonner"
 import { useSession } from "@/lib/auth"
 import { PostForm, PostSettings, PostType, TagManager } from "@/components/post"
 
-export default function NewPostPage() {
+function NewPostPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -225,5 +226,13 @@ export default function NewPostPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function NewPostPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <NewPostPageContent />
+    </Suspense>
   )
 }

@@ -3,50 +3,30 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { signIn } from "../../lib/auth"
+import { signInWithGoogle } from "../../lib/auth"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2 } from "lucide-react"
+import { Loader2, Chrome } from "lucide-react"
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState("")
-  const router = useRouter()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true)
     setError("")
 
     try {
-      const result = await signIn.email({
-        email,
-        password,
-        callbackURL: "/"
-      })
+      const result = await signInWithGoogle("/")
 
       if (result.error) {
-        setError(result.error.message || "Invalid email or password")
-      } else if (result.data) {
-        router.push("/")
+        setError(result.error.message || "Failed to sign in with Google")
       }
     } catch (err: any) {
-      if (err.status === 401) {
-        setError("Invalid email or password")
-      } else if (err.status === 429) {
-        setError("Too many login attempts. Please try again later.")
-      } else if (err.status === 500) {
-        setError("Server error. Please try again later.")
-      } else {
-        setError(err.message || "Failed to sign in. Please check your credentials and try again.")
-      }
+      setError(err.message || "Failed to sign in with Google")
     } finally {
-      setLoading(false)
+      setGoogleLoading(false)
     }
   }
 
@@ -62,46 +42,26 @@ export default function LoginPage() {
             </Link>
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="Enter your email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="Enter your password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+        <CardContent className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
+          <Button
+            type="button"
+            className="w-full"
+            onClick={handleGoogleSignIn}
+            disabled={googleLoading}
+          >
+            {googleLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Chrome className="mr-2 h-4 w-4" />
             )}
-
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {loading ? "Signing in..." : "Sign in"}
-            </Button>
-          </form>
+            {googleLoading ? "Signing in with Google..." : "Sign in with Google"}
+          </Button>
         </CardContent>
       </Card>
     </div>

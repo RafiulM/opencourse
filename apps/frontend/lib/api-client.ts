@@ -603,6 +603,14 @@ export class ApiClient {
     return this.request<ApiResponse<Post>>(`/posts/${id}`);
   }
 
+  async getPostBySlug(slug: string, communityId?: string): Promise<{ success: boolean; data: Post; message: string }> {
+    const params = new URLSearchParams();
+    if (communityId) params.set('communityId', communityId);
+    const queryString = params.toString();
+    const url = `/posts/slug/${slug}${queryString ? `?${queryString}` : ''}`;
+    return this.request<{ success: boolean; data: Post; message: string }>(url);
+  }
+
   async updatePost(data: UpdatePostRequest): Promise<ApiResponse<Post>> {
     return this.request<ApiResponse<Post>>(`/posts/${data.id}`, {
       method: 'PUT',

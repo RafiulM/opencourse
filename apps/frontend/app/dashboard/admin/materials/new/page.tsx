@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -73,7 +74,7 @@ const createMaterialSchema = z
 
 type CreateMaterialForm = z.infer<typeof createMaterialSchema>
 
-export default function NewMaterialPage() {
+function NewMaterialPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const createMaterialMutation = useCreateCourseMaterial()
@@ -647,5 +648,13 @@ export default function NewMaterialPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function NewMaterialPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <NewMaterialPageContent />
+    </Suspense>
   )
 }

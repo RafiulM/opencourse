@@ -70,6 +70,8 @@ export const queryKeys = {
       [...queryKeys.posts.lists(), params] as const,
     details: () => [...queryKeys.posts.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.posts.details(), id] as const,
+    bySlug: (slug: string, communityId?: string) =>
+      [...queryKeys.posts.all, 'slug', slug, communityId].filter(Boolean) as const,
     communityLists: () => [...queryKeys.posts.all, 'community'] as const,
     communityList: (communityId: string, params: { page?: number; pageSize?: number; filters?: any; search?: string; sort?: any }) =>
       [...queryKeys.posts.communityLists(), communityId, params] as const,

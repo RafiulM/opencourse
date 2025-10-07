@@ -1,9 +1,19 @@
+import { Metadata } from "next"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import {
   SidebarInset,
   SidebarProvider,
 } from "@/components/ui/sidebar"
+
+export const metadata: Metadata = {
+  title: "Admin Dashboard - OpenCourse",
+  description: "Manage communities, courses, and monitor platform analytics.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+}
 
 export default function AdminLayout({
   children,

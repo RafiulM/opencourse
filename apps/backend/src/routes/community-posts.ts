@@ -89,13 +89,15 @@ const router: Router = Router();
 router.post('/:communityId/posts', authenticate, async (req, res) => {
   try {
     const { communityId } = req.params;
-    validateCreatePostData({ ...req.body, communityId });
-
     const postData = {
       ...req.body,
       communityId // Ensure communityId from path is used
     };
 
+    // Validate the post data (slug is now optional)
+    validateCreatePostData(postData);
+
+    // Create post - slug will be auto-generated from title if not provided
     const post = await PostService.createPost(req.user!.id, communityId, postData);
     res.status(201).json({
       success: true,
@@ -213,7 +215,11 @@ router.get('/:communityId/posts', async (req, res) => {
     const result = await PostService.getCommunityPosts(communityId, options);
     res.json({
       success: true,
-      data: result,
+      data: result.data,
+      totalCount: result.totalCount,
+      totalPages: result.totalPages,
+      currentPage: result.currentPage,
+      pageSize: result.pageSize,
       message: 'Community posts retrieved successfully'
     });
   } catch (error) {
@@ -280,7 +286,11 @@ router.get('/:communityId/posts/featured', async (req, res) => {
     const result = await PostService.getCommunityPosts(communityId, options);
     res.json({
       success: true,
-      data: result,
+      data: result.data,
+      totalCount: result.totalCount,
+      totalPages: result.totalPages,
+      currentPage: result.currentPage,
+      pageSize: result.pageSize,
       message: 'Featured posts retrieved successfully'
     });
   } catch (error) {
@@ -347,7 +357,11 @@ router.get('/:communityId/posts/pinned', async (req, res) => {
     const result = await PostService.getCommunityPosts(communityId, options);
     res.json({
       success: true,
-      data: result,
+      data: result.data,
+      totalCount: result.totalCount,
+      totalPages: result.totalPages,
+      currentPage: result.currentPage,
+      pageSize: result.pageSize,
       message: 'Pinned posts retrieved successfully'
     });
   } catch (error) {
@@ -414,7 +428,11 @@ router.get('/:communityId/posts/announcements', async (req, res) => {
     const result = await PostService.getCommunityPosts(communityId, options);
     res.json({
       success: true,
-      data: result,
+      data: result.data,
+      totalCount: result.totalCount,
+      totalPages: result.totalPages,
+      currentPage: result.currentPage,
+      pageSize: result.pageSize,
       message: 'Announcements retrieved successfully'
     });
   } catch (error) {

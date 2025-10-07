@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -33,7 +34,7 @@ const createModuleSchema = z.object({
 
 type CreateModuleForm = z.infer<typeof createModuleSchema>;
 
-export default function NewModulePage() {
+function NewModulePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const createModuleMutation = useCreateCourseModule();
@@ -221,5 +222,13 @@ export default function NewModulePage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function NewModulePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <NewModulePageContent />
+    </Suspense>
   );
 }

@@ -536,4 +536,63 @@ router.get('/:id/likes', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/posts/slug/{slug}:
+ *   get:
+ *     summary: Get post by slug
+ *     tags: [Posts]
+ *     parameters:
+ *       - in: path
+ *         name: slug
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Post slug
+ *       - in: query
+ *         name: communityId
+ *         schema:
+ *           type: string
+ *         description: Optional community ID to narrow search within specific community
+ *     responses:
+ *       200:
+ *         description: Post retrieved successfully
+ *       404:
+ *         description: Post not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/slug/:slug', optionalAuth, async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { communityId } = req.query;
+
+    const post = await PostService.getPostBySlug(slug, communityId as string);
+
+    if (!post) {
+      throw new AppError('Post not found', 404, 'RESOURCE_NOT_FOUND' as any);
+    }
+
+    // Increment view count asynchronously
+    if (req.user) {
+      PostService.incrementViewCount(post.id).catch(console.error);
+    }
+
+    res.json({
+      success: true,
+      data: post,
+      message: 'Post retrieved successfully'
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
+  }
+});
+
 export default router;
