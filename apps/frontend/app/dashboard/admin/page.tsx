@@ -1,6 +1,12 @@
-'use client';
+"use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
@@ -13,7 +19,7 @@ import {
   Plus,
   TrendingUp,
   Clock,
-  AlertCircle
+  AlertCircle,
 } from "lucide-react"
 import { useCommunities } from "@/hooks/use-communities"
 import { useCourses } from "@/hooks/use-courses"
@@ -26,15 +32,23 @@ export default function AdminDashboard() {
   const { data: session } = useSession()
   const userId = session?.user?.id
 
-  const { data: communitiesData } = useCommunities(1, 100, { createdBy: userId }) // Get user's communities for accurate count
+  console.log({ session })
+
+  const { data: communitiesData } = useCommunities(1, 100, {
+    createdBy: userId,
+  }) // Get user's communities for accurate count
   const { data: coursesData } = useCourses(1, 100) // Get all courses for accurate count
   const { data: quizzesData } = useQuizzes(1, 100) // Get all quizzes for content count
-  const { totalModules, totalMaterials, totalContentItems, isLoading } = useContentStats()
+  const { totalModules, totalMaterials, totalContentItems, isLoading } =
+    useContentStats()
   const { data: postsData } = usePosts({ page: 1, pageSize: 100 }) // Get posts for stats
 
   // Calculate total students from communities
-  const totalStudents = communitiesData?.data?.reduce((sum, community) =>
-    sum + (community.memberCount || 0), 0) || 0
+  const totalStudents =
+    communitiesData?.data?.reduce(
+      (sum, community) => sum + (community.memberCount || 0),
+      0
+    ) || 0
 
   // Calculate total content items
   const totalQuizzes = quizzesData?.data?.length || 0
@@ -42,12 +56,17 @@ export default function AdminDashboard() {
 
   // Real data for posts and comments
   const totalPosts = postsData?.data?.pagination?.totalItems || 0
-  const totalComments = postsData?.data?.posts?.reduce((sum, post) =>
-    sum + (post.commentsCount || 0), 0) || 0
+  const totalComments =
+    postsData?.data?.posts?.reduce(
+      (sum, post) => sum + (post.commentsCount || 0),
+      0
+    ) || 0
 
   // Calculate published and draft posts from real data
-  const publishedPosts = postsData?.data?.posts?.filter(post => post.isPublished)?.length || 0
-  const draftPosts = postsData?.data?.posts?.filter(post => !post.isPublished)?.length || 0
+  const publishedPosts =
+    postsData?.data?.posts?.filter((post) => post.isPublished)?.length || 0
+  const draftPosts =
+    postsData?.data?.posts?.filter((post) => !post.isPublished)?.length || 0
 
   // Note: reported comments, approved/pending/rejected comments would need a separate API endpoint
   // For now, we'll show only total comments which we have real data for
@@ -58,29 +77,29 @@ export default function AdminDashboard() {
       value: communitiesData?.pagination?.total || 0,
       icon: Building2,
       color: "text-blue-600",
-      bgColor: "bg-blue-50"
+      bgColor: "bg-blue-50",
     },
     {
       title: "Total Courses",
       value: coursesData?.pagination?.total || 0,
       icon: BookOpen,
       color: "text-green-600",
-      bgColor: "bg-green-50"
+      bgColor: "bg-green-50",
     },
     {
       title: "Social Posts",
       value: totalPosts.toLocaleString(),
       icon: FileText,
       color: "text-indigo-600",
-      bgColor: "bg-indigo-50"
+      bgColor: "bg-indigo-50",
     },
     {
       title: "Comments",
       value: totalComments.toLocaleString(),
       icon: MessageSquare,
       color: "text-pink-600",
-      bgColor: "bg-pink-50"
-    }
+      bgColor: "bg-pink-50",
+    },
   ]
 
   const quickActions = [
@@ -89,29 +108,29 @@ export default function AdminDashboard() {
       description: "Start a new learning community",
       href: "/dashboard/admin/communities/new",
       icon: Building2,
-      color: "text-blue-600"
+      color: "text-blue-600",
     },
     {
       title: "Create Course",
       description: "Add a new course to a community",
       href: "/dashboard/admin/courses/new",
       icon: BookOpen,
-      color: "text-green-600"
+      color: "text-green-600",
     },
     {
       title: "Create Post",
       description: "Write a new social post",
       href: "/dashboard/admin/posts/new",
       icon: FileText,
-      color: "text-indigo-600"
+      color: "text-indigo-600",
     },
     {
       title: "Moderate Comments",
       description: "Review reported comments",
       href: "/dashboard/admin/comments",
       icon: MessageSquare,
-      color: "text-pink-600"
-    }
+      color: "text-pink-600",
+    },
   ]
 
   return (
@@ -137,21 +156,19 @@ export default function AdminDashboard() {
       <Card>
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>
-            Common administrative tasks
-          </CardDescription>
+          <CardDescription>Common administrative tasks</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {quickActions.map((action) => (
             <Link key={action.title} href={action.href}>
               <Button
                 variant="outline"
-                className="w-full justify-start h-auto p-4"
+                className="h-auto w-full justify-start p-4"
               >
                 <action.icon className={`mr-3 h-5 w-5 ${action.color}`} />
                 <div className="text-left">
                   <div className="font-medium">{action.title}</div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-muted-foreground text-sm">
                     {action.description}
                   </div>
                 </div>
@@ -173,16 +190,19 @@ export default function AdminDashboard() {
                 </Button>
               </Link>
             </CardTitle>
-            <CardDescription>
-              Manage learning communities
-            </CardDescription>
+            <CardDescription>Manage learning communities</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               {communitiesData?.data?.slice(0, 3).map((community) => (
-                <div key={community.id} className="flex items-center justify-between">
+                <div
+                  key={community.id}
+                  className="flex items-center justify-between"
+                >
                   <span className="text-sm">{community.name}</span>
-                  <Badge variant="outline">{community.memberCount} members</Badge>
+                  <Badge variant="outline">
+                    {community.memberCount} members
+                  </Badge>
                 </div>
               ))}
             </div>
@@ -199,14 +219,15 @@ export default function AdminDashboard() {
                 </Button>
               </Link>
             </CardTitle>
-            <CardDescription>
-              Manage course content
-            </CardDescription>
+            <CardDescription>Manage course content</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               {coursesData?.data?.slice(0, 3).map((course) => (
-                <div key={course.id} className="flex items-center justify-between">
+                <div
+                  key={course.id}
+                  className="flex items-center justify-between"
+                >
                   <span className="text-sm">{course.title}</span>
                   <Badge variant={course.isPublished ? "default" : "secondary"}>
                     {course.isPublished ? "Published" : "Draft"}
@@ -259,9 +280,7 @@ export default function AdminDashboard() {
                 </Button>
               </Link>
             </CardTitle>
-            <CardDescription>
-              Moderate user comments
-            </CardDescription>
+            <CardDescription>Moderate user comments</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between">
@@ -269,7 +288,9 @@ export default function AdminDashboard() {
               <Badge variant="outline">{totalComments}</Badge>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Comments moderation</span>
+              <span className="text-muted-foreground text-sm">
+                Comments moderation
+              </span>
               <Badge variant="secondary">Available</Badge>
             </div>
           </CardContent>
