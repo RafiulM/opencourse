@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { MarkdownPreviewer } from "@/components/markdown-previewer"
 import {
   Select,
   SelectContent,
@@ -249,16 +250,16 @@ export default function EditPostPage() {
                   {/* Content */}
                   <div className="space-y-2">
                     <Label htmlFor="content">Content *</Label>
-                    <Textarea
-                      id="content"
-                      placeholder="Write your post content here (markdown supported)..."
+                    <MarkdownPreviewer
                       value={formData.content}
-                      onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                      rows={12}
-                      className="min-h-[300px]"
+                      onChange={(value) => setFormData(prev => ({ ...prev, content: value }))}
+                      placeholder="Write your post content here (markdown supported)..."
+                      className="min-h-[400px]"
+                      editorClassName="min-h-[400px]"
+                      previewClassName="min-h-[400px]"
                     />
                     <p className="text-sm text-muted-foreground">
-                      Markdown formatting is supported. Use # for headers, * for emphasis, etc.
+                      Markdown formatting is supported. Use # for headers, * for emphasis, ** for bold, etc.
                     </p>
                   </div>
                 </>
