@@ -19,7 +19,7 @@ COPY . .
 RUN npm install
 
 # Build arguments for environment variables
-ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_API_BASE_URL
 ARG NEXT_PUBLIC_APP_URL
 
 # Build the application
