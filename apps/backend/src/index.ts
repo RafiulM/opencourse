@@ -133,6 +133,8 @@ app.use(
       "Authorization",
       "X-Requested-With",
       "Accept",
+      "Cookie",
+      "Set-Cookie",
     ],
   })
 )
