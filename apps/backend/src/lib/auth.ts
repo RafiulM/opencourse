@@ -25,6 +25,10 @@ export const auth: ReturnType<typeof betterAuth> = betterAuth({
     "https://app.opencourse.id",
     ...(process.env.TRUSTED_ORIGINS?.split(",") || []),
   ],
+  crossSubDomainCookies: {
+    enabled: true,
+    domain: ".opencourse.id",
+  },
   session: {
     cookieCache: {
       enabled: true,
