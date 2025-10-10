@@ -22,6 +22,7 @@ export const auth: ReturnType<typeof betterAuth> = betterAuth({
     "http://localhost:3050",
     "http://localhost:3000",
     "http://localhost:5173",
+    "https://app.opencourse.id",
     ...(process.env.TRUSTED_ORIGINS?.split(",") || []),
   ],
 })
