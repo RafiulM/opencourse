@@ -29,18 +29,19 @@ export const auth: ReturnType<typeof betterAuth> = betterAuth({
     enabled: true,
     domain: ".opencourse.id",
   },
-  // session: {
-  //   cookieCache: {
-  //     enabled: true,
-  //     maxAge: 5 * 60, // 5 minutes
-  //   },
-  //   expiresIn: 60 * 60 * 24 * 7, // 7 days
-  //   updateAge: 24 * 60 * 60, // 1 day
-  //   cookieAttributes: {
-  //     secure: process.env.NODE_ENV === "production",
-  //     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-  //     httpOnly: true,
-  //     maxAge: 60 * 60 * 24 * 7, // 7 days
-  //   },
-  // },
+  session: {
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60, // 5 minutes
+    },
+    expiresIn: 60 * 60 * 24 * 7, // 7 days
+    updateAge: 24 * 60 * 60, // 1 day
+    cookieAttributes: {
+      secure: true,
+      sameSite: "none",
+      httpOnly: true,
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      domain: ".opencourse.id",
+    },
+  },
 })
