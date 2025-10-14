@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
+import { requireAuth } from '@/lib/auth-server';
 
 export const metadata: Metadata = {
   title: 'Dashboard - OpenCourse',
@@ -10,6 +11,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default function DashboardRedirect() {
+export default async function DashboardRedirect() {
+  // Check authentication before redirecting
+  await requireAuth();
   redirect('/dashboard/admin');
 }

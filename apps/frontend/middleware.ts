@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getSessionCookie } from "better-auth/cookies"
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
+  const { pathname, search } = new URL(request.url)
 
-  const sessionCookie = getSessionCookie(request)
+  // Create a new response and add custom headers for server components
+  const response = NextResponse.next()
 
-  console.log({ sessionCookie })
+  // Set headers that auth-server.ts expects
+  response.headers.set("x-pathname", pathname)
+  response.headers.set("x-search-params", search.slice(1)) // Remove '?' prefix
 
-  if (pathname.startsWith("/dashboard") && !sessionCookie) {
-    return NextResponse.redirect(new URL("/login", request.url))
-  }
-  return NextResponse.next()
+  return response
 }
 
 export const config = {
-  runtime: "nodejs",
-  matcher: ["/dashboard/:path*"],
+  matcher: [
+    // Match all paths except static files and API routes
+    "/((?!_next/static|_next/image|favicon.ico|api).*)",
+  ],
 }

@@ -1,69 +1,19 @@
-"use client"
+import { getCurrentSession } from '@/lib/auth-server'
+import { handleLoginRedirect } from '@/lib/auth-server'
+import LoginPageClient from './login-client'
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { signInWithGoogle } from "../../lib/auth"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Chrome } from "lucide-react"
+export default async function LoginPage(props: {
+  searchParams?: Promise<{ returnUrl?: string }>
+}) {
+  // Check if user is already authenticated (without redirecting)
+  const session = await getCurrentSession()
 
-export default function LoginPage() {
-  const [googleLoading, setGoogleLoading] = useState(false)
-  const [error, setError] = useState("")
-
-  const handleGoogleSignIn = async () => {
-    setGoogleLoading(true)
-    setError("")
-
-    try {
-      const result = await signInWithGoogle("/")
-
-      if (result.error) {
-        setError(result.error.message || "Failed to sign in with Google")
-      }
-    } catch (err: any) {
-      setError(err.message || "Failed to sign in with Google")
-    } finally {
-      setGoogleLoading(false)
-    }
+  // If user is already authenticated, handle redirect to previous page
+  if (session) {
+    const searchParams = await props.searchParams
+    return handleLoginRedirect(searchParams?.returnUrl)
   }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Sign in to your account</CardTitle>
-          <CardDescription className="text-center">
-            Or{" "}
-            <Link href="/signup" className="font-medium text-primary hover:underline">
-              create a new account
-            </Link>
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <Button
-            type="button"
-            className="w-full"
-            onClick={handleGoogleSignIn}
-            disabled={googleLoading}
-          >
-            {googleLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Chrome className="mr-2 h-4 w-4" />
-            )}
-            {googleLoading ? "Signing in with Google..." : "Sign in with Google"}
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
-  )
+  // Otherwise show the login form
+  return <LoginPageClient />
 }

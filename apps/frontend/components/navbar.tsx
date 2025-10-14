@@ -1,73 +1,70 @@
-'use client';
+"use client"
 
-import Link from "next/link";
-import { useSession, signOut } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { LogOut, BookOpen, Users, Grid3X3 } from "lucide-react";
-import { useCommunities } from "@/hooks/use-communities";
+import Link from "next/link"
+import { useSession, signOut } from "@/lib/auth"
+import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { LogOut, BookOpen, Users, Grid3X3 } from "lucide-react"
+import { useCommunities } from "@/hooks/use-communities"
 
 export function Navbar() {
-  const { data: session, isPending } = useSession();
-  const { data: communitiesData } = useCommunities(1, 100); // Fetch to check if communities exist
-  
+  const { data: session, isPending } = useSession()
+  const { data: communitiesData } = useCommunities(1, 100) // Fetch to check if communities exist
+
   // Show skeleton while session is loading
   if (isPending) {
     return (
-      <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+      <nav className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 border-b backdrop-blur">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between">
             {/* Logo skeleton */}
             <div className="flex items-center space-x-2">
-              <div className="h-6 w-6 bg-muted rounded animate-pulse"></div>
-              <div className="h-6 w-24 bg-muted rounded animate-pulse"></div>
+              <div className="bg-muted h-6 w-6 animate-pulse rounded"></div>
+              <div className="bg-muted h-6 w-24 animate-pulse rounded"></div>
             </div>
 
             {/* Navigation items skeleton */}
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-3">
-                <div className="hidden md:flex items-center space-x-2">
-                  <div className="h-8 w-20 bg-muted rounded animate-pulse"></div>
-                  <div className="h-8 w-32 bg-muted rounded animate-pulse"></div>
+                <div className="hidden items-center space-x-2 md:flex">
+                  <div className="bg-muted h-8 w-20 animate-pulse rounded"></div>
+                  <div className="bg-muted h-8 w-32 animate-pulse rounded"></div>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <div className="hidden sm:flex items-center space-x-2">
-                    <div className="h-8 w-8 rounded-full bg-muted animate-pulse"></div>
-                    <div className="h-4 w-20 bg-muted rounded animate-pulse"></div>
+                  <div className="hidden items-center space-x-2 sm:flex">
+                    <div className="bg-muted h-8 w-8 animate-pulse rounded-full"></div>
+                    <div className="bg-muted h-4 w-20 animate-pulse rounded"></div>
                   </div>
-                  <div className="h-8 w-8 rounded-full bg-muted animate-pulse sm:hidden"></div>
-                  <div className="h-8 w-20 bg-muted rounded animate-pulse"></div>
+                  <div className="bg-muted h-8 w-8 animate-pulse rounded-full sm:hidden"></div>
+                  <div className="bg-muted h-8 w-20 animate-pulse rounded"></div>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </nav>
-    );
+    )
   }
-
-  // Check if user should see create community button
-  // In a real app, you'd check if the authenticated user owns/manages any communities
-  // For demo purposes, we'll only show "Create Community" if no communities exist at all
-  // This simulates a "first user experience" where they need to create the first community
-  const shouldShowCreateButton = !communitiesData?.data || communitiesData.data.length === 0;
 
   const getInitials = (name: string) => {
     return name
-      .split(' ')
-      .map(word => word.charAt(0))
-      .join('')
+      .split(" ")
+      .map((word) => word.charAt(0))
+      .join("")
       .toUpperCase()
-      .slice(0, 2);
-  };
+      .slice(0, 2)
+  }
 
   return (
-    <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+    <nav className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 border-b backdrop-blur">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-            <BookOpen className="h-6 w-6 text-primary" />
+          <Link
+            href="/"
+            className="flex items-center space-x-2 transition-opacity hover:opacity-80"
+          >
+            <BookOpen className="text-primary h-6 w-6" />
             <h1 className="text-xl font-bold">OpenCourse</h1>
           </Link>
 
@@ -76,40 +73,36 @@ export function Navbar() {
             {session ? (
               <div className="flex items-center space-x-3">
                 {/* Admin Actions */}
-                <div className="hidden md:flex items-center space-x-2">
+                <div className="hidden items-center space-x-2 md:flex">
                   <Button variant="ghost" size="sm" asChild>
                     <Link href="/dashboard/admin">
-                      <Grid3X3 className="h-4 w-4 mr-2" />
+                      <Grid3X3 className="mr-2 h-4 w-4" />
                       Dashboard
                     </Link>
                   </Button>
-                  
-                  {shouldShowCreateButton && (
-                    <Button size="sm" asChild>
-                      <Link href="/dashboard/admin/communities/new">
-                        Create First Community
-                      </Link>
-                    </Button>
-                  )}
                 </div>
 
                 {/* User Info */}
                 <div className="flex items-center space-x-3">
-                  <div className="hidden sm:flex items-center space-x-2">
+                  <div className="hidden items-center space-x-2 sm:flex">
                     <Avatar className="h-8 w-8">
                       <AvatarFallback>
-                        {getInitials(session.user.name || session.user.email || 'U')}
+                        {getInitials(
+                          session.user.name || session.user.email || "U"
+                        )}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-sm font-medium max-w-32 truncate">
+                    <span className="max-w-32 truncate text-sm font-medium">
                       {session.user.name || session.user.email}
                     </span>
                   </div>
-                  
+
                   {/* Mobile Avatar */}
                   <Avatar className="h-8 w-8 sm:hidden">
                     <AvatarFallback>
-                      {getInitials(session.user.name || session.user.email || 'U')}
+                      {getInitials(
+                        session.user.name || session.user.email || "U"
+                      )}
                     </AvatarFallback>
                   </Avatar>
 
@@ -138,5 +131,5 @@ export function Navbar() {
         </div>
       </div>
     </nav>
-  );
+  )
 }
