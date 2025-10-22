@@ -23,6 +23,10 @@ export const auth: ReturnType<typeof betterAuth> = betterAuth({
       enabled: true,
       domain: "app.opencourse.id",
     },
+    defaultCookieAttributes: {
+      sameSite: 'None', // this enables cross-site cookies
+      secure: true, // required for SameSite=None
+    },
   },
   trustedOrigins: [
     "http://localhost:3050",
