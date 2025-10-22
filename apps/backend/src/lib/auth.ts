@@ -18,30 +18,17 @@ export const auth: ReturnType<typeof betterAuth> = betterAuth({
         "http://localhost:5005/api/auth/callback/google",
     },
   },
+  advanced:{
+    crossSubDomainCookies: {
+      enabled: true,
+      domain: "app.opencourse.id",
+    },
+  },
   trustedOrigins: [
     "http://localhost:3050",
     "http://localhost:3000",
     "http://localhost:5173",
     "https://app.opencourse.id",
     ...(process.env.TRUSTED_ORIGINS?.split(",") || []),
-  ],
-  crossSubDomainCookies: {
-    enabled: true,
-    domain: ".opencourse.id",
-  },
-  session: {
-    cookieCache: {
-      enabled: true,
-      maxAge: 5 * 60, // 5 minutes
-    },
-    expiresIn: 60 * 60 * 24 * 7, // 7 days
-    updateAge: 24 * 60 * 60, // 1 day
-    cookieAttributes: {
-      secure: true,
-      sameSite: "none",
-      httpOnly: true,
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      domain: ".opencourse.id",
-    },
-  },
+  ]
 })
