@@ -52,7 +52,7 @@ export class ApiClient {
   constructor(config: ApiClientConfig = {}) {
     this.baseURL = config.baseURL || process.env.NEXT_PUBLIC_API_BASE_URL ?
       (process.env.NEXT_PUBLIC_API_BASE_URL + "/api")
-      : 'http://localhost:5000/api';
+      : 'http://localhost:5005/api';
     this.timeout = config.timeout || 10000;
     this.defaultHeaders = {
       'Content-Type': 'application/json',
