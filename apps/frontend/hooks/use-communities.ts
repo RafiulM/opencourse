@@ -28,6 +28,25 @@ export function useCommunity(id: string, enabled = true) {
   });
 }
 
+export function useCommunityBySlug(slug: string, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.communities.detailBySlug(slug),
+    queryFn: () => apiClient.getCommunityBySlug(slug),
+    enabled: enabled && !!slug,
+  });
+}
+
+export function useCommunityPreviewBySlug(
+  slug: string,
+  options: { enabled?: boolean } = {}
+) {
+  return useQuery({
+    queryKey: queryKeys.communities.detailPreview(slug),
+    queryFn: () => apiClient.getCommunityPreviewBySlug(slug),
+    enabled: (options.enabled ?? true) && !!slug,
+  });
+}
+
 export function useCreateCommunity() {
   const queryClient = useQueryClient();
   

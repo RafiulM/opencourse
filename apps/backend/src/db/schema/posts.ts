@@ -5,6 +5,7 @@ import { uploads } from "./uploads";
 import { relations } from "drizzle-orm";
 
 export const postTypeEnum = pgEnum('post_type', ['general', 'announcement', 'discussion', 'resource']);
+export const postVisibilityEnum = pgEnum('post_visibility', ['community', 'public']);
 
 export const posts = pgTable('posts', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -32,6 +33,7 @@ export const posts = pgTable('posts', {
   postType: postTypeEnum('post_type').default('general').notNull(),
   allowComments: boolean('allow_comments').default(true).notNull(),
   isModerated: boolean('is_moderated').default(false).notNull(), // Requires moderator approval
+  visibility: postVisibilityEnum('visibility').default('community').notNull(), // Viewing permission: community only or public
 
   // Metadata
   metadata: jsonb('metadata').default({}), // Additional post metadata

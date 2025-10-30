@@ -7,6 +7,8 @@ export const queryKeys = {
       [...queryKeys.communities.lists(), params] as const,
     details: () => [...queryKeys.communities.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.communities.details(), id] as const,
+    detailBySlug: (slug: string) => [...queryKeys.communities.details(), 'slug', slug] as const,
+    detailPreview: (slug: string) => [...queryKeys.communities.details(), 'slug-preview', slug] as const,
   },
   courses: {
     all: ['courses'] as const,

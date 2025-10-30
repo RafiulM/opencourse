@@ -12,11 +12,13 @@ export function useCourses(
   page = 1, 
   limit = 20, 
   filters: Record<string, any> = {},
-  sort: string[] = []
+  sort: string[] = [],
+  options: { enabled?: boolean } = {}
 ) {
   return useQuery({
     queryKey: queryKeys.courses.list({ page, limit, filters, sort }),
     queryFn: () => apiClient.getCourses(page, limit, filters, sort),
+    enabled: options.enabled ?? true,
   });
 }
 

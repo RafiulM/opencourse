@@ -38,6 +38,7 @@ function NewPostPageContent() {
     postType: "general",
     tags: [],
     allowComments: true,
+    visibility: "community",
     isPublished: false,
     attachments: [],
   })
@@ -183,6 +184,10 @@ function NewPostPageContent() {
             allowComments={!!formData.allowComments}
             onAllowCommentsChange={(allowComments) =>
               setFormData((prev) => ({ ...prev, allowComments }))
+            }
+            visibility={formData.visibility || "community"}
+            onVisibilityChange={(visibility) =>
+              setFormData((prev) => ({ ...prev, visibility }))
             }
             isPublished={!!formData.isPublished}
             onIsPublishedChange={(isPublished) =>

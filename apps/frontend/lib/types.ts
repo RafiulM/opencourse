@@ -284,6 +284,7 @@ export interface Post {
   isPinned: boolean;
   isFeatured: boolean;
   allowComments: boolean;
+  visibility: 'community' | 'public';
   likesCount: number;
   commentsCount: number;
   viewsCount: number;
@@ -329,6 +330,7 @@ export interface CreatePostRequest {
   postType?: 'general' | 'announcement' | 'discussion' | 'resource';
   tags?: string[];
   allowComments?: boolean;
+  visibility?: 'community' | 'public';
   isPublished?: boolean;
   attachments?: Array<{
     uploadId: string;

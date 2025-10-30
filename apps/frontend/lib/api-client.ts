@@ -69,15 +69,17 @@ export class ApiClient {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
+    const { headers: customHeaders, credentials, ...restOptions } = options;
+
     try {
       const response = await fetch(url, {
-        ...options,
+        ...restOptions,
         headers: {
           ...this.defaultHeaders,
-          ...options.headers,
+          ...customHeaders,
         },
         signal: controller.signal,
-        credentials: 'include',
+        credentials: credentials ?? 'include',
       });
 
       clearTimeout(timeoutId);
@@ -131,6 +133,16 @@ export class ApiClient {
 
   async getCommunity(id: string): Promise<ApiResponse<Community>> {
     return this.request<ApiResponse<Community>>(`/communities/${id}`);
+  }
+
+  async getCommunityBySlug(slug: string): Promise<ApiResponse<Community>> {
+    return this.request<ApiResponse<Community>>(`/communities/slug/${slug}`);
+  }
+
+  async getCommunityPreviewBySlug(slug: string): Promise<ApiResponse<Community>> {
+    return this.request<ApiResponse<Community>>(`/communities/slug/${slug}`, {
+      credentials: 'omit',
+    });
   }
 
   async createCommunity(data: CreateCommunityRequest): Promise<ApiResponse<Community>> {

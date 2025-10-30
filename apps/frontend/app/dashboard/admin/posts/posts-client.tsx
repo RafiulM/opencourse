@@ -378,7 +378,7 @@ export default function PostsPage() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem asChild>
                                 <Link
-                                  href={`/communities/${post.community?.slug || post.communityId}/posts/${post.id}`}
+                                  href={`/communities/${post.community?.slug || post.communityId}/posts/${post.slug || post.id}`}
                                   className="flex items-center"
                                 >
                                   <Eye className="mr-2 h-4 w-4" />

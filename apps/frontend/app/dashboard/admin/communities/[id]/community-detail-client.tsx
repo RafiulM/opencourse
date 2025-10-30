@@ -540,7 +540,7 @@ export default function CommunityDetailPageClient({ id }: CommunityDetailPageCli
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <Link href={`/communities/${community.id}/posts/${post.id}`}>
+                          <Link href={`/communities/${community.slug ?? community.id}/posts/${post.slug ?? post.id}`}>
                             <DropdownMenuItem>
                               <Eye className="mr-2 h-4 w-4" />
                               View

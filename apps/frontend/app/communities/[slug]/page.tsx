@@ -3,15 +3,15 @@ import { CommunityPageClient } from "./community-page-client"
 
 interface CommunityPageProps {
   params: Promise<{
-    id: string
+    slug: string
   }>
 }
 
 export async function generateMetadata({ params }: CommunityPageProps): Promise<Metadata> {
-  const { id } = await params
+  const { slug } = await params
   try {
-    // Fetch community data for metadata
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/communities/${id}`, {
+    const encodedSlug = encodeURIComponent(slug)
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/communities/slug/${encodedSlug}`, {
       cache: 'no-store',
     })
 
@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: CommunityPageProps): Promise<
           community.description ? ` ${community.description}` : ''
         }`,
         type: 'website',
-        url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://opencourse.com'}/communities/${id}`,
+        url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://opencourse.com'}/communities/${slug}`,
         siteName: 'OpenCourse',
         images: community.banner ? [community.banner] : community.avatar ? [community.avatar] : [],
       },
@@ -61,6 +61,6 @@ export async function generateMetadata({ params }: CommunityPageProps): Promise<
 }
 
 export default async function CommunityPage({ params }: CommunityPageProps) {
-  const { id } = await params
-  return <CommunityPageClient communityId={id} />
+  const { slug } = await params
+  return <CommunityPageClient communitySlug={slug} />
 }

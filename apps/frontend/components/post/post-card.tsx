@@ -49,9 +49,11 @@ export function PostCard({ post, className }: PostCardProps) {
     return plainText.length > 150 ? plainText.slice(0, 150) + "..." : plainText
   }
 
+  const communitySlug = post.community?.slug ?? post.communityId
+
   return (
     <Link
-      href={`/communities/${post.communityId}/posts/${post.slug}`}
+      href={`/communities/${communitySlug}/posts/${post.slug}`}
       className={cn("block transition-transform hover:scale-[1.02]", className)}
     >
       <Card className="h-full cursor-pointer hover:shadow-lg transition-all duration-200">

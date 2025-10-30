@@ -222,6 +222,14 @@ export const validateCreatePostData = (data: any) => {
     errors.push('Allow comments must be a boolean');
   }
 
+  if (data.visibility !== undefined) {
+    if (typeof data.visibility !== 'string') {
+      errors.push('Visibility must be a string');
+    } else if (!['community', 'public'].includes(data.visibility)) {
+      errors.push('Visibility must be one of: community, public');
+    }
+  }
+
   if (data.isPublished !== undefined && typeof data.isPublished !== 'boolean') {
     errors.push('Is published must be a boolean');
   }
@@ -327,6 +335,14 @@ export const validateUpdatePostData = (data: any) => {
 
   if (data.allowComments !== undefined && typeof data.allowComments !== 'boolean') {
     errors.push('Allow comments must be a boolean');
+  }
+
+  if (data.visibility !== undefined) {
+    if (typeof data.visibility !== 'string') {
+      errors.push('Visibility must be a string');
+    } else if (!['community', 'public'].includes(data.visibility)) {
+      errors.push('Visibility must be one of: community, public');
+    }
   }
 
   if (data.isPublished !== undefined && typeof data.isPublished !== 'boolean') {

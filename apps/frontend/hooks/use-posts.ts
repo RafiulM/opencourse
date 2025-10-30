@@ -108,11 +108,17 @@ export function usePostLikes(id: string, page = 1, pageSize = 20, enabled = true
 }
 
 // Community Posts Hooks
-export function useCommunityPosts(communityId: string, options: Omit<PostQueryOptions, 'filters'> & { filters?: Omit<PostQueryOptions['filters'], 'communityId'> } = {}) {
+export function useCommunityPosts(
+  communityId: string,
+  options: Omit<PostQueryOptions, 'filters'> & {
+    filters?: Omit<PostQueryOptions['filters'], 'communityId'>
+  } = {},
+  queryOptions: { enabled?: boolean } = {}
+) {
   return useQuery({
     queryKey: queryKeys.posts.communityList(communityId, options),
     queryFn: () => apiClient.getCommunityPosts(communityId, options),
-    enabled: !!communityId,
+    enabled: !!communityId && (queryOptions.enabled ?? true),
   });
 }
 

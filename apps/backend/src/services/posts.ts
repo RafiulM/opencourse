@@ -32,6 +32,7 @@ export interface CreatePostData {
   postType?: "general" | "announcement" | "discussion" | "resource"
   tags?: string[]
   allowComments?: boolean
+  visibility?: "community" | "public"
   attachments?: Array<{
     uploadId: string
     type: "image" | "video" | "file" | "audio" | "document"
@@ -51,6 +52,7 @@ export interface UpdatePostData {
   excerpt?: string
   tags?: string[]
   allowComments?: boolean
+  visibility?: "community" | "public"
   isPublished?: boolean
   slug?: string
 }
@@ -151,6 +153,7 @@ class PostService {
         postType: data.postType || "general",
         tags: data.tags || [],
         allowComments: data.allowComments !== false,
+        visibility: data.visibility || "community",
         isPublished: data.isPublished !== false,
         isPinned: false,
         isFeatured: false,
@@ -201,6 +204,7 @@ class PostService {
         isFeatured: posts.isFeatured,
         allowComments: posts.allowComments,
         isModerated: posts.isModerated,
+        visibility: posts.visibility,
         viewCount: posts.viewCount,
         likeCount: posts.likeCount,
         commentCount: posts.commentCount,
@@ -393,6 +397,7 @@ class PostService {
         isFeatured: posts.isFeatured,
         allowComments: posts.allowComments,
         isModerated: posts.isModerated,
+        visibility: posts.visibility,
         viewCount: posts.viewCount,
         likeCount: posts.likeCount,
         commentCount: posts.commentCount,
@@ -497,6 +502,7 @@ class PostService {
         isFeatured: posts.isFeatured,
         allowComments: posts.allowComments,
         isModerated: posts.isModerated,
+        visibility: posts.visibility,
         viewCount: posts.viewCount,
         likeCount: posts.likeCount,
         commentCount: posts.commentCount,
@@ -586,6 +592,7 @@ class PostService {
         isFeatured: posts.isFeatured,
         allowComments: posts.allowComments,
         isModerated: posts.isModerated,
+        visibility: posts.visibility,
         viewCount: posts.viewCount,
         likeCount: posts.likeCount,
         commentCount: posts.commentCount,
@@ -648,18 +655,24 @@ class PostService {
       throw new Error("Insufficient permissions to edit this post")
     }
 
+    const updateData: any = {
+      title: data.title,
+      content: data.content,
+      excerpt: data.excerpt,
+      tags: data.tags,
+      allowComments: data.allowComments,
+      isPublished: data.isPublished,
+      slug: data.slug,
+      updatedAt: new Date(),
+    }
+    
+    if (data.visibility !== undefined) {
+      updateData.visibility = data.visibility
+    }
+
     const [updatedPost] = await db
       .update(posts)
-      .set({
-        title: data.title,
-        content: data.content,
-        excerpt: data.excerpt,
-        tags: data.tags,
-        allowComments: data.allowComments,
-        isPublished: data.isPublished,
-        slug: data.slug,
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(posts.id, id))
       .returning()
 
@@ -815,6 +828,7 @@ class PostService {
         isPinned: posts.isPinned,
         isFeatured: posts.isFeatured,
         allowComments: posts.allowComments,
+        visibility: posts.visibility,
         viewCount: posts.viewCount,
         likeCount: posts.likeCount,
         commentCount: posts.commentCount,
@@ -897,6 +911,7 @@ class PostService {
         isPinned: posts.isPinned,
         isFeatured: posts.isFeatured,
         allowComments: posts.allowComments,
+        visibility: posts.visibility,
         viewCount: posts.viewCount,
         likeCount: posts.likeCount,
         commentCount: posts.commentCount,

@@ -9,7 +9,13 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 
 export type PostType = "general" | "announcement" | "discussion" | "resource"
 
@@ -18,6 +24,8 @@ interface PostSettingsProps {
   onPostTypeChange: (type: PostType) => void
   allowComments: boolean
   onAllowCommentsChange: (allow: boolean) => void
+  visibility: "community" | "public"
+  onVisibilityChange: (visibility: "community" | "public") => void
   isPublished: boolean
   onIsPublishedChange: (published: boolean) => void
   className?: string
@@ -28,9 +36,11 @@ export function PostSettings({
   onPostTypeChange,
   allowComments,
   onAllowCommentsChange,
+  visibility,
+  onVisibilityChange,
   isPublished,
   onIsPublishedChange,
-  className
+  className,
 }: PostSettingsProps) {
   return (
     <Card className={className}>
@@ -60,6 +70,30 @@ export function PostSettings({
           </Select>
         </div>
 
+        {/* Visibility */}
+        <div className="space-y-2">
+          <Label>Viewing Permission</Label>
+          <Select
+            value={visibility}
+            onValueChange={(value: "community" | "public") =>
+              onVisibilityChange(value)
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="community">Community Only</SelectItem>
+              <SelectItem value="public">Public</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-muted-foreground text-sm">
+            {visibility === "community"
+              ? "Only community members can view this post"
+              : "Anyone can view this post"}
+          </p>
+        </div>
+
         {/* Allow Comments */}
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
@@ -82,10 +116,7 @@ export function PostSettings({
               Post will be {isPublished ? "published" : "saved as draft"}
             </p>
           </div>
-          <Switch
-            checked={isPublished}
-            onCheckedChange={onIsPublishedChange}
-          />
+          <Switch checked={isPublished} onCheckedChange={onIsPublishedChange} />
         </div>
       </CardContent>
     </Card>

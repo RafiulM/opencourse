@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import Link from "next/link"
 import {
   Card,
@@ -37,7 +36,12 @@ import {
   ChevronLeft,
   MoreHorizontal,
   Image as ImageIcon,
+  Globe,
+  Lock,
+  Mail,
+  Home,
 } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import { useCommunities } from "@/hooks/use-communities"
 import { Community } from "@/lib/types"
 import { useQueryState } from "nuqs"
@@ -124,16 +128,16 @@ export function CommunityExplorer({
     sortArray
   )
 
-  const getPrivacyIcon = (privacy: string) => {
+  const getPrivacyIcon = (privacy: string): LucideIcon => {
     switch (privacy) {
       case "public":
-        return "🌍"
+        return Globe
       case "private":
-        return "🔒"
+        return Lock
       case "invite_only":
-        return "📩"
+        return Mail
       default:
-        return "🏠"
+        return Home
     }
   }
 
@@ -198,9 +202,24 @@ export function CommunityExplorer({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="public">🌍 Public</SelectItem>
-              <SelectItem value="private">🔒 Private</SelectItem>
-              <SelectItem value="invite_only">📩 Invite Only</SelectItem>
+              <SelectItem value="public">
+                <span className="flex items-center gap-2">
+                  <Globe className="h-4 w-4" aria-hidden="true" />
+                  Public
+                </span>
+              </SelectItem>
+              <SelectItem value="private">
+                <span className="flex items-center gap-2">
+                  <Lock className="h-4 w-4" aria-hidden="true" />
+                  Private
+                </span>
+              </SelectItem>
+              <SelectItem value="invite_only">
+                <span className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" aria-hidden="true" />
+                  Invite Only
+                </span>
+              </SelectItem>
             </SelectContent>
           </Select>
 
@@ -311,17 +330,20 @@ export function CommunityExplorer({
               : "space-y-4"
           }
         >
-          {communitiesData.data.map((community) => (
-            <Card
-              key={community.id}
-              className={`group cursor-pointer pt-0 transition-all duration-200 hover:shadow-lg ${
-                viewMode === "list" ? "flex flex-row items-center" : ""
-              }`}
-            >
-              <Link
-                href={`/communities/${community.id}`}
-                className={viewMode === "list" ? "flex w-full" : ""}
+          {communitiesData.data.map((community) => {
+            const PrivacyIcon = getPrivacyIcon(community.privacy)
+
+            return (
+              <Card
+                key={community.id}
+                className={`group cursor-pointer pt-0 transition-all duration-200 hover:shadow-lg ${
+                  viewMode === "list" ? "flex flex-row items-center" : ""
+                }`}
               >
+                <Link
+                  href={`/communities/${community.slug ?? community.id}`}
+                  className={viewMode === "list" ? "flex w-full" : ""}
+                >
                 {/* Banner Image */}
                 {viewMode === "grid" && (
                   <div className="h-32 w-full overflow-hidden rounded-t-lg">
@@ -362,8 +384,14 @@ export function CommunityExplorer({
                           {community.name}
                         </CardTitle>
                         <div className="mt-1 flex items-center gap-2">
-                          <Badge variant="secondary" className="text-xs">
-                            {getPrivacyIcon(community.privacy)}{" "}
+                          <Badge
+                            variant="secondary"
+                            className="flex items-center gap-1 text-xs"
+                          >
+                            <PrivacyIcon
+                              className="h-3.5 w-3.5"
+                              aria-hidden="true"
+                            />
                             {community.privacy.replace("_", " ")}
                           </Badge>
                           {community.memberCount !== undefined && (
@@ -373,7 +401,6 @@ export function CommunityExplorer({
                           )}
                         </div>
                       </div>
-                      <ChevronRight className="text-muted-foreground group-hover:text-primary h-5 w-5 transition-colors" />
                     </div>
                   </div>
                 </CardHeader>
@@ -381,15 +408,8 @@ export function CommunityExplorer({
                 {viewMode === "grid" && (
                   <CardContent>
                     <CardDescription className="line-clamp-3">
-                      {community.description ||
-                        "Discover courses and learning materials in this community."}
+                      {community.description}
                     </CardDescription>
-                    <div className="text-muted-foreground mt-3 flex items-center justify-between text-sm">
-                      <span>Community</span>
-                      <span className="group-hover:text-primary flex items-center transition-colors">
-                        Explore <ChevronRight className="ml-1 h-3 w-3" />
-                      </span>
-                    </div>
                   </CardContent>
                 )}
 
@@ -402,7 +422,8 @@ export function CommunityExplorer({
                 )}
               </Link>
             </Card>
-          ))}
+            )
+          })}
         </div>
       ) : !isLoading ? (
         <div className="mx-auto flex max-w-2xl flex-col items-center justify-center py-12">

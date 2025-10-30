@@ -3,16 +3,33 @@ import { PostDetailPageClient } from "./post-detail-page-client"
 
 interface PostDetailPageProps {
   params: {
-    id: string
     slug: string
+    postSlug: string
   }
 }
 
 export async function generateMetadata({ params }: PostDetailPageProps): Promise<Metadata> {
   try {
-    // Fetch post data for metadata
+    const encodedCommunitySlug = encodeURIComponent(params.slug)
+    const encodedPostSlug = encodeURIComponent(params.postSlug)
+
+    const communityResponse = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/communities/slug/${encodedCommunitySlug}`,
+      { cache: 'no-store' }
+    )
+
+    if (!communityResponse.ok) {
+      return {
+        title: 'Community Post',
+        description: 'Read this community post and join the discussion.',
+      }
+    }
+
+    const communityData = await communityResponse.json()
+    const community = communityData.data
+
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/posts/slug/${params.slug}?communityId=${params.id}`,
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/posts/slug/${encodedPostSlug}?communityId=${community.id}`,
       { cache: 'no-store' }
     )
 
@@ -42,7 +59,7 @@ export async function generateMetadata({ params }: PostDetailPageProps): Promise
         type: 'article',
         publishedTime: post.publishedAt || post.createdAt,
         authors: post.author?.name ? [post.author.name] : [],
-        siteName: post.community?.name || 'OpenCourse Community',
+      siteName: post.community?.name || 'OpenCourse Community',
         images: post.attachments?.filter(a => a.type === 'image').map(a => ({
           url: a.upload?.url || '',
           width: 1200,
@@ -67,5 +84,5 @@ export async function generateMetadata({ params }: PostDetailPageProps): Promise
 }
 
 export default function PostDetailPage({ params }: PostDetailPageProps) {
-  return <PostDetailPageClient communityId={params.id} slug={params.slug} />
+  return <PostDetailPageClient communitySlug={params.slug} postSlug={params.postSlug} />
 }

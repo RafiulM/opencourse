@@ -19,17 +19,17 @@ import {
   Link as LinkIcon,
   Video
 } from "lucide-react";
-import { useCommunity } from "@/hooks/use-communities";
+import { useCommunityBySlug } from "@/hooks/use-communities";
 import { useCourse } from "@/hooks/use-courses";
 import { useCourseModules } from "@/hooks/use-modules";
 import { useCourseMaterials } from "@/hooks/use-materials";
 
 export default function CommunityCoursePage() {
   const params = useParams();
-  const communityId = params.id as string;
+  const communitySlug = params.slug as string;
   const courseId = params.courseId as string;
   
-  const { data: communityData } = useCommunity(communityId);
+  const { data: communityData } = useCommunityBySlug(communitySlug);
   const { data: courseData, isLoading: courseLoading } = useCourse(courseId);
   const { data: modulesData } = useCourseModules(courseId);
   
@@ -62,7 +62,7 @@ export default function CommunityCoursePage() {
         <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-muted-foreground">Course not found</h1>
-            <Link href={`/communities/${communityId}`}>
+            <Link href={`/communities/${communitySlug}`}>
               <Button className="mt-4">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Community
@@ -81,7 +81,7 @@ export default function CommunityCoursePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <Link href={`/communities/${communityId}`}>
+              <Link href={`/communities/${communitySlug}`}>
                 <Button variant="ghost" size="sm">
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back to {community?.name || 'Community'}
@@ -103,7 +103,7 @@ export default function CommunityCoursePage() {
             {/* Course Header */}
             <div>
               <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-2">
-                <Link href={`/communities/${communityId}`} className="hover:text-primary">
+                <Link href={`/communities/${communitySlug}`} className="hover:text-primary">
                   {community?.name}
                 </Link>
                 <span>•</span>
@@ -320,7 +320,7 @@ export default function CommunityCoursePage() {
                     <p className="text-sm text-muted-foreground line-clamp-3">
                       {community.description || "Part of this learning community"}
                     </p>
-                    <Link href={`/communities/${communityId}`}>
+                    <Link href={`/communities/${communitySlug}`}>
                       <Button variant="outline" size="sm" className="w-full mt-2">
                         View Community
                       </Button>

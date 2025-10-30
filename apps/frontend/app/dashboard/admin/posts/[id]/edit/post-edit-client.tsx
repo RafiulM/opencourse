@@ -21,7 +21,7 @@ import { PostForm, PostSettings, PostType, TagManager } from "@/components/post"
 import { Badge } from "@/components/ui/badge"
 
 interface EditPostPageClientProps {
-  id: string;
+  id: string
 }
 
 export default function EditPostPageClient({ id }: EditPostPageClientProps) {
@@ -37,6 +37,7 @@ export default function EditPostPageClient({ id }: EditPostPageClientProps) {
     postType: "general",
     tags: [],
     allowComments: true,
+    visibility: "community",
     isPublished: false,
     attachments: [],
   })
@@ -57,6 +58,7 @@ export default function EditPostPageClient({ id }: EditPostPageClientProps) {
         postType: post.postType,
         tags: post.tags || [],
         allowComments: post.allowComments,
+        visibility: post.visibility || "community",
         isPublished: post.isPublished,
         attachments: post.attachments || [],
       })
@@ -250,6 +252,10 @@ export default function EditPostPageClient({ id }: EditPostPageClientProps) {
             allowComments={!!formData.allowComments}
             onAllowCommentsChange={(allowComments) =>
               setFormData((prev) => ({ ...prev, allowComments }))
+            }
+            visibility={formData.visibility || "community"}
+            onVisibilityChange={(visibility) =>
+              setFormData((prev) => ({ ...prev, visibility }))
             }
             isPublished={!!formData.isPublished}
             onIsPublishedChange={(isPublished) =>
