@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import {
   Card,
@@ -10,9 +10,11 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Save, Eye, Loader2 } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { ArrowLeft, Save, Eye, Loader2, CheckCircle, AlertCircle, Clock } from "lucide-react"
 import Link from "next/link"
 import { useUpdatePost, usePost } from "@/hooks/use-posts"
+import { useAutoSave } from "@/hooks/useAutoSave"
 import { UpdatePostRequest } from "@/lib/types"
 import { toast } from "sonner"
 import { PostForm, PostType } from "@/components/post"
@@ -26,6 +28,8 @@ export default function EditPostPageClient({ id }: EditPostPageClientProps) {
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isPreview, setIsPreview] = useState(false)
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null)
   const [formData, setFormData] = useState<UpdatePostRequest>({
     id: id,
     title: "",
@@ -41,6 +45,9 @@ export default function EditPostPageClient({ id }: EditPostPageClientProps) {
 
   const { data: postData, isLoading: isLoadingPost } = usePost(id, true)
   const updatePostMutation = useUpdatePost()
+
+  // Create a separate mutation for auto-saving to avoid conflicts with manual saves
+  const autoSaveMutation = useUpdatePost()
 
   const post = postData?.data
 
@@ -62,6 +69,59 @@ export default function EditPostPageClient({ id }: EditPostPageClientProps) {
     }
   }, [post])
 
+  // Auto-save functionality
+  const { triggerAutoSave, cancelAutoSave } = useAutoSave(
+    autoSaveMutation.mutateAsync,
+    {
+      debounceMs: 1000,
+      onSave: () => setAutoSaveStatus('saving'),
+      onSaveSuccess: () => {
+        setAutoSaveStatus('saved')
+        setLastSavedTime(new Date())
+        // Reset to idle after 2 seconds
+        setTimeout(() => setAutoSaveStatus('idle'), 2000)
+      },
+      onError: (error) => {
+        setAutoSaveStatus('error')
+        toast.error("Auto-save failed: " + (error.message || "Unknown error"))
+        // Reset to idle after 3 seconds
+        setTimeout(() => setAutoSaveStatus('idle'), 3000)
+      },
+      compareFn: (prev, current) => {
+        // Only compare fields that should trigger auto-save
+        return JSON.stringify({
+          title: prev.title,
+          content: prev.content,
+          excerpt: prev.excerpt,
+          postType: prev.postType,
+          tags: prev.tags,
+          allowComments: prev.allowComments,
+          visibility: prev.visibility,
+        }) === JSON.stringify({
+          title: current.title,
+          content: current.content,
+          excerpt: current.excerpt,
+          postType: current.postType,
+          tags: current.tags,
+          allowComments: current.allowComments,
+          visibility: current.visibility,
+        })
+      }
+    }
+  )
+
+  // Trigger auto-save when form data changes
+  useEffect(() => {
+    // Only auto-save if we have initial data and not currently submitting
+    if (post && !isSubmitting && formData.title && formData.content) {
+      triggerAutoSave(formData)
+    }
+
+    return () => {
+      cancelAutoSave()
+    }
+  }, [formData, post, isSubmitting, triggerAutoSave, cancelAutoSave])
+
   const handleSubmit = async (publish: boolean = false) => {
     if (!formData.title?.trim()) {
       toast.error("Title is required")
@@ -72,6 +132,9 @@ export default function EditPostPageClient({ id }: EditPostPageClientProps) {
       toast.error("Content is required")
       return
     }
+
+    // Cancel any pending auto-save before manual save
+    cancelAutoSave()
 
     setIsSubmitting(true)
     try {
@@ -150,7 +213,36 @@ export default function EditPostPageClient({ id }: EditPostPageClientProps) {
               Back to Posts
             </Button>
           </Link>
+
+          {/* Auto-save Status Indicator */}
+          <div className="flex items-center space-x-2">
+            {autoSaveStatus === 'saving' && (
+              <div className="flex items-center space-x-1 text-sm text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <Clock className="h-3 w-3" />
+                <span>Saving...</span>
+              </div>
+            )}
+            {autoSaveStatus === 'saved' && (
+              <div className="flex items-center space-x-1 text-sm text-green-600">
+                <CheckCircle className="h-3 w-3" />
+                <span>Saved</span>
+                {lastSavedTime && (
+                  <span className="text-xs text-muted-foreground">
+                    {lastSavedTime.toLocaleTimeString()}
+                  </span>
+                )}
+              </div>
+            )}
+            {autoSaveStatus === 'error' && (
+              <div className="flex items-center space-x-1 text-sm text-red-600">
+                <AlertCircle className="h-3 w-3" />
+                <span>Save failed</span>
+              </div>
+            )}
+          </div>
         </div>
+
         <div className="flex items-center space-x-2">
           <Button
             variant="outline"

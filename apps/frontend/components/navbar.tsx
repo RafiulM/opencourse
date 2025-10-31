@@ -4,12 +4,33 @@ import Link from "next/link"
 import { useSession, signOut } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { LogOut, BookOpen, Users, Grid3X3 } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  LogOut,
+  BookOpen,
+  Grid3X3,
+  ChevronDown,
+  Moon,
+  Sun,
+  Monitor,
+} from "lucide-react"
 import { useCommunities } from "@/hooks/use-communities"
+import { useTheme } from "next-themes"
 
 export function Navbar() {
   const { data: session, isPending } = useSession()
   const { data: communitiesData } = useCommunities(1, 100) // Fetch to check if communities exist
+  const { theme, resolvedTheme, setTheme } = useTheme()
+  const activeTheme = theme ?? resolvedTheme ?? "system"
 
   // Show skeleton while session is loading
   if (isPending) {
@@ -73,49 +94,93 @@ export function Navbar() {
             {session ? (
               <div className="flex items-center space-x-3">
                 {/* Admin Actions */}
-                <div className="hidden items-center space-x-2 md:flex">
+                {/* <div className="hidden items-center space-x-2 md:flex">
                   <Button variant="ghost" size="sm" asChild>
                     <Link href="/dashboard/admin">
                       <Grid3X3 className="mr-2 h-4 w-4" />
                       Dashboard
                     </Link>
                   </Button>
-                </div>
+                </div> */}
 
                 {/* User Info */}
-                <div className="flex items-center space-x-3">
-                  <div className="hidden items-center space-x-2 sm:flex">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>
-                        {getInitials(
-                          session.user.name || session.user.email || "U"
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 gap-2 px-2 sm:px-3"
+                      aria-label={`Open account menu for ${
+                        session.user.name || session.user.email || "user"
+                      }`}
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback>
+                          {getInitials(
+                            session.user.name || session.user.email || "U"
+                          )}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="hidden max-w-32 truncate text-sm font-medium sm:inline">
+                        {session.user.name || session.user.email}
+                      </span>
+                      <ChevronDown className="hidden h-4 w-4 sm:block" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-60" align="end">
+                    <DropdownMenuLabel>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">
+                          {session.user.name || "Account"}
+                        </span>
+                        {session.user.email && (
+                          <span className="text-muted-foreground text-xs">
+                            {session.user.email}
+                          </span>
                         )}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="max-w-32 truncate text-sm font-medium">
-                      {session.user.name || session.user.email}
-                    </span>
-                  </div>
-
-                  {/* Mobile Avatar */}
-                  <Avatar className="h-8 w-8 sm:hidden">
-                    <AvatarFallback>
-                      {getInitials(
-                        session.user.name || session.user.email || "U"
-                      )}
-                    </AvatarFallback>
-                  </Avatar>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => signOut()}
-                    className="flex items-center space-x-1"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span className="hidden sm:inline">Sign out</span>
-                  </Button>
-                </div>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>Theme</DropdownMenuLabel>
+                    <DropdownMenuRadioGroup
+                      value={activeTheme}
+                      onValueChange={setTheme}
+                    >
+                      <DropdownMenuRadioItem
+                        value="light"
+                        className="flex items-center gap-2"
+                      >
+                        <Sun className="h-4 w-4" />
+                        Light
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem
+                        value="dark"
+                        className="flex items-center gap-2"
+                      >
+                        <Moon className="h-4 w-4" />
+                        Dark
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem
+                        value="system"
+                        className="flex items-center gap-2"
+                      >
+                        <Monitor className="h-4 w-4" />
+                        System
+                      </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive hover:text-destructive flex items-center gap-2"
+                      onSelect={(event) => {
+                        event.preventDefault()
+                        signOut()
+                      }}
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sign out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ) : (
               <div className="flex items-center space-x-2">

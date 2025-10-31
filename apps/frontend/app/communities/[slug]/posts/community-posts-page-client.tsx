@@ -49,9 +49,8 @@ export function CommunityPostsPageClient({
     sort: [{ field: "publishedAt", order: "desc" }],
   })
 
-  const posts = postsData?.data?.posts ?? []
-  const pagination = postsData?.data?.pagination
-  const postsTotal = pagination?.totalItems ?? posts.length
+  const posts = postsData?.data ?? []
+  const postsTotal = postsData?.totalCount ?? posts.length
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage)
@@ -176,7 +175,7 @@ export function CommunityPostsPageClient({
             </div>
           )}
 
-          {pagination && pagination.totalPages > 1 && (
+          {postsData && postsData.totalPages > 1 && (
             <div className="flex items-center justify-center gap-2">
               <Button
                 variant="outline"
@@ -189,18 +188,18 @@ export function CommunityPostsPageClient({
               </Button>
 
               <div className="flex items-center gap-1">
-                {Array.from({ length: pagination.totalPages }).map((_, index) => {
+                {Array.from({ length: postsData.totalPages }).map((_, index) => {
                   const pageNum = index + 1
                   const isCurrent = pageNum === page
                   const showButton =
                     pageNum === 1 ||
-                    pageNum === pagination.totalPages ||
+                    pageNum === postsData.totalPages ||
                     Math.abs(pageNum - page) <= 1
 
                   if (!showButton) {
                     if (
                       Math.abs(pageNum - page) === 2 &&
-                      (pageNum === 2 || pageNum === pagination.totalPages - 1)
+                      (pageNum === 2 || pageNum === postsData.totalPages - 1)
                     ) {
                       return (
                         <span key={pageNum} className="px-2 text-sm text-muted-foreground">
@@ -229,7 +228,7 @@ export function CommunityPostsPageClient({
                 variant="outline"
                 size="sm"
                 onClick={() => handlePageChange(page + 1)}
-                disabled={page >= pagination.totalPages}
+                disabled={page >= postsData.totalPages}
               >
                 Next
                 <ChevronRight className="ml-1 h-4 w-4" />

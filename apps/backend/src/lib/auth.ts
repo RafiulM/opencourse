@@ -10,9 +10,9 @@ export const auth: ReturnType<typeof betterAuth> = betterAuth({
   }),
   // Set base URL for production to help with cookie domain and redirects
   // This should be the backend URL where Better Auth is hosted
-  baseURL: isProduction 
+  baseURL: isProduction
     ? process.env.BETTER_AUTH_URL || process.env.BACKEND_URL || "https://api.opencourse.id"
-    : "http://localhost:5005",
+    : "http://localhost:5006",
   // Explicit base path for auth endpoints
   basePath: "/api/auth",
   emailAndPassword: {
@@ -24,7 +24,7 @@ export const auth: ReturnType<typeof betterAuth> = betterAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
       redirectUri:
         process.env.GOOGLE_REDIRECT_URI ||
-        "http://localhost:5005/api/auth/callback/google",
+        "http://localhost:5006/api/auth/callback/google",
     },
   },
   advanced:{

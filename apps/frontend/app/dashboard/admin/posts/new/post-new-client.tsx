@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Suspense } from "react"
 import {
@@ -20,11 +20,73 @@ import { toast } from "sonner"
 import { useSession } from "@/lib/auth"
 import { PostForm, PostType } from "@/components/post"
 
+const POST_DRAFT_STORAGE_KEY = "post-draft"
+const POST_DRAFT_COMMUNITY_STORAGE_KEY = `${POST_DRAFT_STORAGE_KEY}-community`
+
+// Custom hook for debounced local storage saving
+function useDebouncedLocalStorage<T>(key: string, value: T, delay: number = 1000) {
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem(key, JSON.stringify(value))
+        console.log(`Draft saved to ${key}`)
+      } catch (error) {
+        console.error(`Failed to save draft to ${key}:`, error)
+      }
+    }, delay)
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [key, value, delay])
+
+  const clearSavedData = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+    try {
+      localStorage.removeItem(key)
+    } catch (error) {
+      console.error(`Failed to clear saved data from ${key}:`, error)
+    }
+  }, [key])
+
+  return { clearSavedData }
+}
+
+// Custom hook to load saved data from local storage
+function useLocalStorage<T>(key: string, initialValue: T) {
+  const [storedValue, setStoredValue] = useState<T>(initialValue)
+
+  useEffect(() => {
+    try {
+      const item = window.localStorage.getItem(key)
+      if (item) {
+        setStoredValue(JSON.parse(item))
+      }
+    } catch (error) {
+      console.error(`Failed to load data from ${key}:`, error)
+    }
+  }, [key])
+
+  return storedValue
+}
+
 function NewPostPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [formData, setFormData] = useState<CreatePostRequest>({
+
+  // Load initial form data from local storage if available
+  const initialFormData = useLocalStorage(POST_DRAFT_STORAGE_KEY, {
     title: "",
     content: "",
     excerpt: "",
@@ -35,7 +97,10 @@ function NewPostPageContent() {
     isPublished: false,
     attachments: [],
   })
-  const [selectedCommunityId, setSelectedCommunityId] = useState("")
+
+  const [formData, setFormData] = useState<CreatePostRequest>(initialFormData)
+  const initialCommunityId = useLocalStorage(POST_DRAFT_COMMUNITY_STORAGE_KEY, "")
+  const [selectedCommunityId, setSelectedCommunityId] = useState(initialCommunityId)
   const [errors, setErrors] = useState<{
     community?: string
     title?: string
@@ -50,6 +115,39 @@ function NewPostPageContent() {
   const createPostMutation = useCreateCommunityPost()
 
   const communities = communitiesData?.data || []
+
+  // Use debounced local storage saving for form data and community selection
+  const { clearSavedData: clearFormData } = useDebouncedLocalStorage(
+    POST_DRAFT_STORAGE_KEY,
+    formData
+  )
+  const { clearSavedData: clearCommunityData } = useDebouncedLocalStorage(
+    POST_DRAFT_COMMUNITY_STORAGE_KEY,
+    selectedCommunityId
+  )
+
+  // State to show when draft is being saved
+  const [showSavingIndicator, setShowSavingIndicator] = useState(false)
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+    }
+
+    if (formData.title || formData.content || formData.excerpt) {
+      setShowSavingIndicator(true)
+      saveTimeoutRef.current = setTimeout(() => {
+        setShowSavingIndicator(false)
+      }, 1500)
+    }
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
+    }
+  }, [formData.title, formData.content, formData.excerpt])
 
   // Auto-select community from URL parameter
   useEffect(() => {
@@ -124,6 +222,11 @@ function NewPostPageContent() {
           duration: 4000,
         }
       )
+
+      // Clear saved draft data after successful submission
+      clearFormData()
+      clearCommunityData()
+
       router.push("/dashboard/admin/posts")
     } catch (error) {
       toast.error("Failed to create post", {
@@ -148,6 +251,11 @@ function NewPostPageContent() {
           </Link>
         </div>
         <div className="flex items-center space-x-2">
+          {showSavingIndicator && (
+            <span className="text-sm text-muted-foreground mr-2">
+              Draft saved...
+            </span>
+          )}
           <Button
             variant="outline"
             onClick={() => handleSubmit(false)}

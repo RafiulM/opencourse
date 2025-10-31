@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError, formatErrorResponse, handleDatabaseError, createInternalError } from '../lib/errors';
+import { logDatabaseOperation, logApiCall } from './logger';
 
 export const errorHandler = (
   error: Error,
@@ -7,17 +8,60 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ) => {
-  // Log the error for debugging
-  console.error('Error occurred:', {
-    error: error.message,
-    stack: error.stack,
-    url: req.url,
-    method: req.method,
-    body: req.body,
-    params: req.params,
-    query: req.query,
-    timestamp: new Date().toISOString()
-  });
+  const requestId = (req as any).requestId;
+  const timestamp = new Date().toISOString();
+
+  // Enhanced error logging
+  console.error(`[${timestamp}] [ERROR:${requestId}] ===================`);
+  console.error(`[${timestamp}] [ERROR:${requestId}] ERROR OCCURRED`);
+  console.error(`[${timestamp}] [ERROR:${requestId}] Request ID: ${requestId}`);
+  console.error(`[${timestamp}] [ERROR:${requestId}] Method: ${req.method}`);
+  console.error(`[${timestamp}] [ERROR:${requestId}] URL: ${req.url}`);
+  console.error(`[${timestamp}] [ERROR:${requestId}] User-Agent: ${req.get('User-Agent')}`);
+  console.error(`[${timestamp}] [ERROR:${requestId}] IP: ${req.ip || req.connection.remoteAddress}`);
+
+  // Log user information if available
+  if ((req as any).user) {
+    console.error(`[${timestamp}] [ERROR:${requestId}] User ID: ${(req as any).user.id}`);
+    console.error(`[${timestamp}] [ERROR:${requestId}] User Email: ${(req as any).user.email}`);
+  }
+
+  console.error(`[${timestamp}] [ERROR:${requestId}] Error Message: ${error.message}`);
+  console.error(`[${timestamp}] [ERROR:${requestId}] Error Name: ${error.name}`);
+  console.error(`[${timestamp}] [ERROR:${requestId}] Error Stack: ${error.stack}`);
+
+  // Log request details
+  console.error(`[${timestamp}] [ERROR:${requestId}] Request Params:`, JSON.stringify(req.params, null, 2));
+  console.error(`[${timestamp}] [ERROR:${requestId}] Request Query:`, JSON.stringify(req.query, null, 2));
+
+  // Log body only if it exists and isn't too large
+  if (req.body && Object.keys(req.body).length > 0) {
+    const bodySize = JSON.stringify(req.body).length;
+    if (bodySize > 1000) {
+      console.error(`[${timestamp}] [ERROR:${requestId}] Request Body: [Large payload - ${bodySize} bytes]`);
+    } else {
+      console.error(`[${timestamp}] [ERROR:${requestId}] Request Body:`, JSON.stringify(req.body, null, 2));
+    }
+  }
+
+  // Log headers
+  console.error(`[${timestamp}] [ERROR:${requestId}] Request Headers:`, JSON.stringify(req.headers, null, 2));
+
+  // Log database-specific errors
+  if ('code' in error && 'severity' in error) {
+    const dbError = error as any;
+    console.error(`[${timestamp}] [ERROR:${requestId}] Database Error Code: ${dbError.code}`);
+    console.error(`[${timestamp}] [ERROR:${requestId}] Database Error Severity: ${dbError.severity}`);
+    console.error(`[${timestamp}] [ERROR:${requestId}] Database Error Detail: ${dbError.detail}`);
+    console.error(`[${timestamp}] [ERROR:${requestId}] Database Error Schema: ${dbError.schema}`);
+    console.error(`[${timestamp}] [ERROR:${requestId}] Database Error Table: ${dbError.table}`);
+    console.error(`[${timestamp}] [ERROR:${requestId}] Database Error Column: ${dbError.column}`);
+    console.error(`[${timestamp}] [ERROR:${requestId}] Database Error Constraint: ${dbError.constraint}`);
+
+    logDatabaseOperation('UNKNOWN', dbError.table || 'unknown', null, error);
+  }
+
+  console.error(`[${timestamp}] [ERROR:${requestId}] ===================`);
 
   // Handle known AppError instances
   if (error instanceof AppError) {

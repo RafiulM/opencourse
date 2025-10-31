@@ -14,6 +14,7 @@ import apiRouter from "./routes/index"
 
 // Import error handling middleware
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler"
+import { requestLogger, responseLogger } from "./middleware/logger"
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -140,7 +141,18 @@ app.use(
 )
 
 app.all("/api/auth/*", toNodeHandler(auth))
-app.use(morgan("combined"))
+
+// Enhanced logging middleware
+app.use(requestLogger)
+app.use(morgan("combined", {
+  stream: {
+    write: (message: string) => {
+      console.log(`[MORGAN] ${message.trim()}`)
+    }
+  }
+}))
+app.use(responseLogger)
+
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 

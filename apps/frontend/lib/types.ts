@@ -410,16 +410,11 @@ export interface CreateReplyRequest {
 // Enhanced Response Types for Posts and Comments
 export interface PostListResponse {
   success: boolean;
-  data: {
-    posts: Post[];
-    pagination: {
-      currentPage: number;
-      totalPages: number;
-      totalItems: number;
-      hasNext: boolean;
-      hasPrev: boolean;
-    };
-  };
+  data: Post[];
+  totalCount: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
   message: string;
 }
 

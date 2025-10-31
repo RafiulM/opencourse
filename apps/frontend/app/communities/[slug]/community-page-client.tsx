@@ -4,13 +4,7 @@ import type { ElementType } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import {
-  ArrowLeft,
-  ArrowRight,
-  BookOpen,
-  FileText,
-  Lock,
-} from "lucide-react"
+import { ArrowLeft, ArrowRight, BookOpen, FileText, Lock } from "lucide-react"
 
 import { Navbar } from "@/components/navbar"
 import { Button } from "@/components/ui/button"
@@ -23,7 +17,10 @@ import {
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { PostCard } from "@/components/post/post-card"
-import { useCommunityBySlug, useCommunityPreviewBySlug } from "@/hooks/use-communities"
+import {
+  useCommunityBySlug,
+  useCommunityPreviewBySlug,
+} from "@/hooks/use-communities"
 import { useCourses } from "@/hooks/use-courses"
 import { useCommunityPosts } from "@/hooks/use-posts"
 import { CommunityHeader } from "./community-header"
@@ -33,7 +30,9 @@ interface CommunityPageClientProps {
   communitySlug: string
 }
 
-export function CommunityPageClient({ communitySlug }: CommunityPageClientProps) {
+export function CommunityPageClient({
+  communitySlug,
+}: CommunityPageClientProps) {
   const router = useRouter()
 
   const {
@@ -42,12 +41,10 @@ export function CommunityPageClient({ communitySlug }: CommunityPageClientProps)
     error: communityError,
   } = useCommunityBySlug(communitySlug)
 
-  const {
-    data: communityPreviewData,
-    isLoading: previewLoading,
-  } = useCommunityPreviewBySlug(communitySlug, {
-    enabled: !!communityError,
-  })
+  const { data: communityPreviewData, isLoading: previewLoading } =
+    useCommunityPreviewBySlug(communitySlug, {
+      enabled: !!communityError,
+    })
 
   const communityFromPrimary = communityData?.data
   const communityFromPreview = communityPreviewData?.data
@@ -98,7 +95,9 @@ export function CommunityPageClient({ communitySlug }: CommunityPageClientProps)
     { enabled: shouldFetchCommunityContent }
   )
 
-  const posts = postsData?.data?.posts ?? []
+  const posts = postsData?.data ?? []
+
+  console.log("posts", posts, postsData)
 
   const isCommunityLoading =
     communityLoading || (communityError ? previewLoading : false)
@@ -108,17 +107,17 @@ export function CommunityPageClient({ communitySlug }: CommunityPageClientProps)
       <div className="bg-background min-h-screen">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="animate-pulse space-y-8">
-            <div className="h-48 rounded-lg bg-muted" />
+            <div className="bg-muted h-48 rounded-lg" />
             <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-full bg-muted" />
+              <div className="bg-muted h-16 w-16 rounded-full" />
               <div className="space-y-3">
-                <div className="h-8 w-56 rounded bg-muted" />
-                <div className="h-4 w-72 rounded bg-muted" />
+                <div className="bg-muted h-8 w-56 rounded" />
+                <div className="bg-muted h-4 w-72 rounded" />
               </div>
             </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 3 }).map((_, index) => (
-                <div key={index} className="h-48 rounded-lg bg-muted" />
+                <div key={index} className="bg-muted h-48 rounded-lg" />
               ))}
             </div>
           </div>
@@ -171,7 +170,9 @@ export function CommunityPageClient({ communitySlug }: CommunityPageClientProps)
           community={community}
           showBanner={false} // Banner is now shown at the top of the page
           showRequestToJoin={shouldRestrictContent}
-          onRequestToJoin={shouldRestrictContent ? handleRequestToJoin : undefined}
+          onRequestToJoin={
+            shouldRestrictContent ? handleRequestToJoin : undefined
+          }
         />
 
         {/* Auto-join handler for users redirected after login */}
@@ -260,9 +261,15 @@ export function CommunityPageClient({ communitySlug }: CommunityPageClientProps)
                           </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-3">
-                          <div className="flex items-center justify-between text-sm text-muted-foreground">
-                            <span>Difficulty: {course.difficulty || "Beginner"}</span>
-                            <span>{course.duration ? `${course.duration}h` : "Self-paced"}</span>
+                          <div className="text-muted-foreground flex items-center justify-between text-sm">
+                            <span>
+                              Difficulty: {course.difficulty || "Beginner"}
+                            </span>
+                            <span>
+                              {course.duration
+                                ? `${course.duration}h`
+                                : "Self-paced"}
+                            </span>
                           </div>
                           <Button asChild className="w-full">
                             <Link
@@ -304,8 +311,8 @@ function SectionHeading({
   return (
     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
       <div>
-        <h2 className="text-2xl font-bold text-foreground">{title}</h2>
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <h2 className="text-foreground text-2xl font-bold">{title}</h2>
+        <p className="text-muted-foreground text-sm">{description}</p>
       </div>
       <Button variant="outline" asChild>
         <Link href={href}>
@@ -329,12 +336,12 @@ function EmptyState({
   return (
     <Card>
       <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-          <Icon className="h-6 w-6 text-muted-foreground" />
+        <div className="bg-muted flex h-14 w-14 items-center justify-center rounded-full">
+          <Icon className="text-muted-foreground h-6 w-6" />
         </div>
         <div className="space-y-1">
           <h3 className="text-lg font-semibold">{title}</h3>
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-muted-foreground text-sm">{description}</p>
         </div>
       </CardContent>
     </Card>

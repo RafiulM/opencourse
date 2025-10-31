@@ -9,6 +9,7 @@ import {
 } from "../db/schema"
 import {
   eq,
+  ne,
   and,
   desc,
   asc,
@@ -23,6 +24,7 @@ import {
 } from "drizzle-orm"
 import { PostAttachmentService } from "./post-attachments"
 import { generateUniqueCommunitySlug } from "../lib/slug"
+import { logApiCall, logDatabaseOperation } from "../middleware/logger"
 
 export interface CreatePostData {
   communityId: string
@@ -108,35 +110,50 @@ class PostService {
     communityId: string,
     data: CreatePostData
   ) {
-    // Verify user is member of community
-    const membership = await db
-      .select()
-      .from(communityMembers)
-      .where(
-        and(
-          eq(communityMembers.communityId, communityId),
-          eq(communityMembers.userId, authorId)
-        )
-      )
-      .limit(1)
+    const startTime = Date.now();
 
-    if (membership.length === 0) {
-      throw new Error("User must be a member of the community to create posts")
-    }
+    try {
+      logApiCall('PostService', 'createPost', { authorId, communityId, data });
+
+      // Verify user is member of community
+      logDatabaseOperation('SELECT', 'community_members', { communityId, userId: authorId });
+
+      const membership = await db
+        .select()
+        .from(communityMembers)
+        .where(
+          and(
+            eq(communityMembers.communityId, communityId),
+            eq(communityMembers.userId, authorId)
+          )
+        )
+        .limit(1)
+
+      logDatabaseOperation('SELECT', 'community_members', { result: `Found ${membership.length} memberships` });
+
+      if (membership.length === 0) {
+        const error = new Error("User must be a member of the community to create posts");
+        logApiCall('PostService', 'createPost', { authorId, communityId, data }, null, error);
+        throw error;
+      }
 
     // Check if user can create this type of post
     if (data.postType === "announcement") {
       const userRole = membership[0].role
       if (userRole !== "owner" && userRole !== "moderator") {
-        throw new Error(
+        const error = new Error(
           "Only community owners and moderators can create announcements"
-        )
+        );
+        logApiCall('PostService', 'createPost', { authorId, communityId, data, userRole }, null, error);
+        throw error;
       }
     }
 
     // Generate slug if not provided but title is available
     let finalSlug = data.slug
     if (!finalSlug && data.title) {
+      logDatabaseOperation('SELECT', 'posts', { operation: 'slug uniqueness check', communityId });
+
       finalSlug = await generateUniqueCommunitySlug(
         data.title,
         communityId,
@@ -155,40 +172,65 @@ class PostService {
           return existing.length > 0
         }
       )
+
+      logDatabaseOperation('SELECT', 'posts', { operation: 'slug generated', slug: finalSlug });
     }
 
     const now = new Date()
     const publishedAt = data.isPublished !== false ? now : null
 
+    const postData = {
+      communityId,
+      authorId,
+      title: data.title,
+      content: data.content,
+      excerpt: data.excerpt,
+      postType: data.postType || "general",
+      tags: data.tags || [],
+      allowComments: data.allowComments !== false,
+      visibility: data.visibility || "community",
+      isPublished: data.isPublished !== false,
+      isPinned: false,
+      isFeatured: false,
+      slug: finalSlug,
+      publishedAt,
+      metadata: {},
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    logDatabaseOperation('INSERT', 'posts', postData);
+
     const [post] = await db
       .insert(posts)
-      .values({
-        communityId,
-        authorId,
-        title: data.title,
-        content: data.content,
-        excerpt: data.excerpt,
-        postType: data.postType || "general",
-        tags: data.tags || [],
-        allowComments: data.allowComments !== false,
-        visibility: data.visibility || "community",
-        isPublished: data.isPublished !== false,
-        isPinned: false,
-        isFeatured: false,
-        slug: finalSlug,
-        publishedAt,
-        metadata: {},
-        createdAt: now,
-        updatedAt: now,
-      })
+      .values(postData)
       .returning()
+
+    logDatabaseOperation('INSERT', 'posts', { result: `Post created with ID: ${post.id}` });
 
     // Handle attachments if provided
     if (data.attachments && data.attachments.length > 0) {
+      logDatabaseOperation('INSERT', 'post_attachments', { postId: post.id, attachmentsCount: data.attachments.length });
       await PostAttachmentService.addAttachments(post.id, data.attachments)
     }
 
-    return await this.getPostById(post.id)
+    const result = await this.getPostById(post.id, authorId);
+    const duration = Date.now() - startTime;
+
+    logApiCall('PostService', 'createPost', { authorId, communityId, data }, {
+      postId: post.id,
+      duration: `${duration}ms`,
+      success: true
+    });
+
+    return result
+
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      logApiCall('PostService', 'createPost', { authorId, communityId, data }, null, error as Error);
+      logDatabaseOperation('INSERT', 'posts', { error: (error as Error).message, duration: `${duration}ms` });
+      throw error;
+    }
   }
 
   // Get community posts with filtering and pagination
@@ -256,19 +298,19 @@ class PostService {
     ]
 
     // Add visibility filtering
+    // For community posts page, allow both public and community posts
+    // Only filter out private posts for non-members
     if (userId) {
-      // Authenticated user - can see public posts + community posts if they're a member
+      // Authenticated user - check if member
       const isMember = await this.isCommunityMember(userId, communityId);
-      if (isMember) {
-        // User is a member - can see both public and community posts
-        // No additional visibility filter needed
-      } else {
-        // User is not a member - can only see public posts
-        baseConditions.push(eq(posts.visibility, 'public'));
+      if (!isMember) {
+        // Non-member can see public and community posts, but not private posts
+        baseConditions.push(or(eq(posts.visibility, 'public'), eq(posts.visibility, 'community')));
       }
+      // Members can see all posts (no additional filter needed)
     } else {
-      // Unauthenticated user - can only see public posts
-      baseConditions.push(eq(posts.visibility, 'public'));
+      // Unauthenticated user can see public and community posts, but not private posts
+      baseConditions.push(or(eq(posts.visibility, 'public'), eq(posts.visibility, 'community')));
     }
 
     query.where(and(...baseConditions))
@@ -334,12 +376,16 @@ class PostService {
 
     // Apply the same visibility logic to count query
     if (userId) {
+      // Authenticated user - check if member
       const isMember = await this.isCommunityMember(userId, communityId);
       if (!isMember) {
-        countBaseConditions.push(eq(posts.visibility, 'public'));
+        // Non-member can see public and community posts, but not private posts
+        countBaseConditions.push(or(eq(posts.visibility, 'public'), eq(posts.visibility, 'community')));
       }
+      // Members can see all posts (no additional filter needed)
     } else {
-      countBaseConditions.push(eq(posts.visibility, 'public'));
+      // Unauthenticated user can see public and community posts, but not private posts
+      countBaseConditions.push(or(eq(posts.visibility, 'public'), eq(posts.visibility, 'community')));
     }
 
     const countQuery = db
@@ -476,15 +522,14 @@ class PostService {
     // Apply base conditions
     const baseConditions = [isNull(posts.deletedAt)]
 
-    // For the global posts endpoint, only show public posts unless user is specified
-    // This is a safety measure - typically the global posts endpoint should only show public posts
+    // For the global posts endpoint used by admin dashboard:
+    // - If no userId: only show public posts (public access)
+    // - If userId provided: show all posts (for admin use)
     if (!userId) {
       baseConditions.push(eq(posts.visibility, 'public'))
-    } else {
-      // If userId is provided, we could implement logic to show community posts for communities the user belongs to
-      // For now, we'll still only show public posts for the global endpoint
-      baseConditions.push(eq(posts.visibility, 'public'))
     }
+    // Note: When userId is provided, we don't filter by visibility
+    // This allows admins to see all posts including drafts and community posts
 
     query.where(and(...baseConditions))
 
@@ -509,9 +554,8 @@ class PostService {
     // Apply the same visibility logic to count query
     if (!userId) {
       countBaseConditions.push(eq(posts.visibility, 'public'))
-    } else {
-      countBaseConditions.push(eq(posts.visibility, 'public'))
     }
+    // Note: When userId is provided, we don't filter by visibility for count query either
 
     const [{ count: totalCount }] = await db
       .select({ count: count() })
@@ -744,7 +788,7 @@ class PostService {
 
   // Update post (author/community moderator only)
   static async updatePost(id: string, userId: string, data: UpdatePostData) {
-    const post = await this.getPostById(id)
+    const post = await this.getPostById(id, userId)
     if (!post) {
       throw new Error("Post not found")
     }
@@ -780,7 +824,7 @@ class PostService {
 
   // Delete post (author/community admin only)
   static async deletePost(id: string, userId: string) {
-    const post = await this.getPostById(id)
+    const post = await this.getPostById(id, userId)
     if (!post) {
       throw new Error("Post not found")
     }
@@ -801,7 +845,7 @@ class PostService {
 
   // Like/unlike post
   static async toggleLike(postId: string, userId: string) {
-    const post = await this.getPostById(postId)
+    const post = await this.getPostById(postId, userId)
     if (!post) {
       throw new Error("Post not found")
     }
@@ -840,7 +884,7 @@ class PostService {
 
   // Pin/unpin post (community moderator only)
   static async togglePinPost(id: string, userId: string) {
-    const post = await this.getPostById(id)
+    const post = await this.getPostById(id, userId)
     if (!post) {
       throw new Error("Post not found")
     }
@@ -865,7 +909,7 @@ class PostService {
 
   // Feature/unfeature post (community admin only)
   static async toggleFeaturePost(id: string, userId: string) {
-    const post = await this.getPostById(id)
+    const post = await this.getPostById(id, userId)
     if (!post) {
       throw new Error("Post not found")
     }

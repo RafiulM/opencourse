@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { NuqsAdapter } from "nuqs/adapters/next/app"
 import { Providers } from "@/lib/providers"
-import { Footer } from "@/components/layout/footer"
+import { FooterContainer } from "@/components/layout/footer-container"
 import "./globals.css"
 
 const geistSans = Geist({
@@ -32,7 +32,7 @@ export default function RootLayout({
       >
         <NuqsAdapter>
           <Providers>{children}</Providers>
-          <Footer />
+          <FooterContainer />
         </NuqsAdapter>
       </body>
     </html>
