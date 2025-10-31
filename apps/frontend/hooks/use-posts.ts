@@ -21,6 +21,13 @@ export function usePost(id: string, enabled = true) {
     queryKey: queryKeys.posts.detail(id),
     queryFn: () => apiClient.getPost(id),
     enabled: enabled && !!id,
+    retry: (failureCount, error: any) => {
+      // Don't retry on visibility-based access errors
+      if (error?.code === 'AUTHENTICATION_REQUIRED' || error?.code === 'ACCESS_DENIED') {
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
 }
 
@@ -119,6 +126,13 @@ export function useCommunityPosts(
     queryKey: queryKeys.posts.communityList(communityId, options),
     queryFn: () => apiClient.getCommunityPosts(communityId, options),
     enabled: !!communityId && (queryOptions.enabled ?? true),
+    retry: (failureCount, error: any) => {
+      // Don't retry on visibility-based access errors
+      if (error?.code === 'AUTHENTICATION_REQUIRED' || error?.code === 'ACCESS_DENIED') {
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
 }
 

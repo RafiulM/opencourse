@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import { Post } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { PostVisibilityBadge } from "./access-control"
 
 interface PostCardProps {
   post: Post
@@ -85,16 +86,19 @@ export function PostCard({ post, className }: PostCardProps) {
               </div>
             </div>
 
-            {post.isPinned && (
-              <Badge variant="secondary" className="text-xs">
-                Pinned
-              </Badge>
-            )}
-            {post.isFeatured && (
-              <Badge variant="default" className="text-xs">
-                Featured
-              </Badge>
-            )}
+            <div className="flex flex-col gap-1">
+              {post.isPinned && (
+                <Badge variant="secondary" className="text-xs">
+                  Pinned
+                </Badge>
+              )}
+              {post.isFeatured && (
+                <Badge variant="default" className="text-xs">
+                  Featured
+                </Badge>
+              )}
+              <PostVisibilityBadge visibility={post.visibility} className="text-xs" />
+            </div>
           </div>
         </CardHeader>
 

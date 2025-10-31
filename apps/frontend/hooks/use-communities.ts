@@ -72,11 +72,55 @@ export function useUpdateCommunity() {
 
 export function useDeleteCommunity() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (id: string) => apiClient.deleteCommunity(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.communities.all });
+    },
+  });
+}
+
+// Community Membership Hooks
+export function useCommunityMembership(communityId: string, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.communities.membership(communityId),
+    queryFn: () => apiClient.checkCommunityMembership(communityId),
+    enabled: enabled && !!communityId,
+    retry: false, // Don't retry on 401/403 errors as these are expected for non-members
+  });
+}
+
+export function useJoinCommunity() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (communityId: string) => apiClient.joinCommunity(communityId),
+    onSuccess: (_, communityId) => {
+      // Invalidate membership status for this community
+      queryClient.invalidateQueries({ queryKey: queryKeys.communities.membership(communityId) });
+      // Invalidate community details to update member count
+      queryClient.invalidateQueries({ queryKey: queryKeys.communities.detail(communityId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.communities.detailBySlug('') }); // Will be updated with actual slug
+      // Invalidate communities list to reflect updated member count
+      queryClient.invalidateQueries({ queryKey: queryKeys.communities.lists() });
+    },
+  });
+}
+
+export function useLeaveCommunity() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (communityId: string) => apiClient.leaveCommunity(communityId),
+    onSuccess: (_, communityId) => {
+      // Invalidate membership status for this community
+      queryClient.invalidateQueries({ queryKey: queryKeys.communities.membership(communityId) });
+      // Invalidate community details to update member count
+      queryClient.invalidateQueries({ queryKey: queryKeys.communities.detail(communityId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.communities.detailBySlug('') }); // Will be updated with actual slug
+      // Invalidate communities list to reflect updated member count
+      queryClient.invalidateQueries({ queryKey: queryKeys.communities.lists() });
     },
   });
 }

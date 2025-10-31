@@ -3,12 +3,14 @@ export const queryKeys = {
   communities: {
     all: ['communities'] as const,
     lists: () => [...queryKeys.communities.all, 'list'] as const,
-    list: (params: { page?: number; limit?: number; filters?: Record<string, any>; sort?: string[] }) => 
+    list: (params: { page?: number; limit?: number; filters?: Record<string, any>; sort?: string[] }) =>
       [...queryKeys.communities.lists(), params] as const,
     details: () => [...queryKeys.communities.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.communities.details(), id] as const,
     detailBySlug: (slug: string) => [...queryKeys.communities.details(), 'slug', slug] as const,
     detailPreview: (slug: string) => [...queryKeys.communities.details(), 'slug-preview', slug] as const,
+    memberships: () => [...queryKeys.communities.all, 'membership'] as const,
+    membership: (communityId: string) => [...queryKeys.communities.memberships(), communityId] as const,
   },
   courses: {
     all: ['courses'] as const,
@@ -73,7 +75,7 @@ export const queryKeys = {
     details: () => [...queryKeys.posts.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.posts.details(), id] as const,
     bySlug: (slug: string, communityId?: string) =>
-      [...queryKeys.posts.all, 'slug', slug, communityId].filter(Boolean) as const,
+      [...queryKeys.posts.all, 'slug', slug, ...(communityId ? [communityId] : [])] as const,
     communityLists: () => [...queryKeys.posts.all, 'community'] as const,
     communityList: (communityId: string, params: { page?: number; pageSize?: number; filters?: any; search?: string; sort?: any }) =>
       [...queryKeys.posts.communityLists(), communityId, params] as const,

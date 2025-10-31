@@ -84,6 +84,24 @@ export interface PaginatedResponse<T> {
 }
 
 class PostService {
+  // Helper method to check if user is a community member
+  static async isCommunityMember(userId: string, communityId: string): Promise<boolean> {
+    if (!userId) return false;
+
+    const membership = await db
+      .select()
+      .from(communityMembers)
+      .where(
+        and(
+          eq(communityMembers.communityId, communityId),
+          eq(communityMembers.userId, userId)
+        )
+      )
+      .limit(1);
+
+    return membership.length > 0;
+  }
+
   // Create new post with attachments in community
   static async createPost(
     authorId: string,
@@ -176,7 +194,8 @@ class PostService {
   // Get community posts with filtering and pagination
   static async getCommunityPosts(
     communityId: string,
-    options: PostQueryOptions = {}
+    options: PostQueryOptions = {},
+    userId?: string
   ) {
     const {
       page = 1,
@@ -236,6 +255,22 @@ class PostService {
       isNull(posts.deletedAt),
     ]
 
+    // Add visibility filtering
+    if (userId) {
+      // Authenticated user - can see public posts + community posts if they're a member
+      const isMember = await this.isCommunityMember(userId, communityId);
+      if (isMember) {
+        // User is a member - can see both public and community posts
+        // No additional visibility filter needed
+      } else {
+        // User is not a member - can only see public posts
+        baseConditions.push(eq(posts.visibility, 'public'));
+      }
+    } else {
+      // Unauthenticated user - can only see public posts
+      baseConditions.push(eq(posts.visibility, 'public'));
+    }
+
     query.where(and(...baseConditions))
 
     // Apply filters
@@ -290,11 +325,27 @@ class PostService {
       )
     }
 
-    // Get total count
+    // Get total count - apply the same visibility filtering
+    const countBaseConditions = [
+      eq(posts.communityId, communityId),
+      eq(posts.isPublished, true),
+      isNull(posts.deletedAt),
+    ]
+
+    // Apply the same visibility logic to count query
+    if (userId) {
+      const isMember = await this.isCommunityMember(userId, communityId);
+      if (!isMember) {
+        countBaseConditions.push(eq(posts.visibility, 'public'));
+      }
+    } else {
+      countBaseConditions.push(eq(posts.visibility, 'public'));
+    }
+
     const countQuery = db
       .select({ count: count() })
       .from(posts)
-      .where(and(...baseConditions))
+      .where(and(...countBaseConditions))
 
     const dynamicCountQuery = countQuery.$dynamic()
 
@@ -370,7 +421,7 @@ class PostService {
   }
 
   // Get posts across communities (admin/moderator use)
-  static async getPosts(options: PostQueryOptions = {}) {
+  static async getPosts(options: PostQueryOptions = {}, userId?: string) {
     const {
       page = 1,
       pageSize = 20,
@@ -424,6 +475,17 @@ class PostService {
 
     // Apply base conditions
     const baseConditions = [isNull(posts.deletedAt)]
+
+    // For the global posts endpoint, only show public posts unless user is specified
+    // This is a safety measure - typically the global posts endpoint should only show public posts
+    if (!userId) {
+      baseConditions.push(eq(posts.visibility, 'public'))
+    } else {
+      // If userId is provided, we could implement logic to show community posts for communities the user belongs to
+      // For now, we'll still only show public posts for the global endpoint
+      baseConditions.push(eq(posts.visibility, 'public'))
+    }
+
     query.where(and(...baseConditions))
 
     // Apply filters
@@ -442,10 +504,19 @@ class PostService {
     }
 
     // Get total count
+    const countBaseConditions = [isNull(posts.deletedAt)]
+
+    // Apply the same visibility logic to count query
+    if (!userId) {
+      countBaseConditions.push(eq(posts.visibility, 'public'))
+    } else {
+      countBaseConditions.push(eq(posts.visibility, 'public'))
+    }
+
     const [{ count: totalCount }] = await db
       .select({ count: count() })
       .from(posts)
-      .where(and(...baseConditions))
+      .where(and(...countBaseConditions))
 
     const totalPages = Math.ceil(totalCount / pageSize)
 
@@ -485,7 +556,7 @@ class PostService {
   }
 
   // Get single post by slug
-  static async getPostBySlug(slug: string, communityId?: string) {
+  static async getPostBySlug(slug: string, communityId?: string, userId?: string) {
     const query = db
       .select({
         id: posts.id,
@@ -565,17 +636,32 @@ class PostService {
       return null
     }
 
+    const post = results[0]
+
+    // Check visibility access control
+    if (post.visibility === 'community') {
+      if (!userId) {
+        throw new Error('Authentication required for community posts')
+      }
+
+      const isMember = await this.isCommunityMember(userId, post.communityId)
+      if (!isMember) {
+        throw new Error('Access denied - community membership required')
+      }
+    }
+    // Public posts are accessible to everyone
+
     // Group attachments
     const postWithAttachments = {
-      ...results[0],
-      attachments: results[0].attachments ? [results[0].attachments] : [],
+      ...post,
+      attachments: post.attachments ? [post.attachments] : [],
     }
 
     return postWithAttachments
   }
 
   // Get single post by ID
-  static async getPostById(id: string) {
+  static async getPostById(id: string, userId?: string) {
     const [post] = await db
       .select({
         id: posts.id,
@@ -633,6 +719,19 @@ class PostService {
     if (!post) {
       return null
     }
+
+    // Check visibility access control
+    if (post.visibility === 'community') {
+      if (!userId) {
+        throw new Error('Authentication required for community posts')
+      }
+
+      const isMember = await this.isCommunityMember(userId, post.communityId)
+      if (!isMember) {
+        throw new Error('Access denied - community membership required')
+      }
+    }
+    // Public posts are accessible to everyone
 
     // Group attachments
     const postWithAttachments = {

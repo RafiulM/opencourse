@@ -6,7 +6,7 @@ import {
   validatePaginationParams,
   validatePostQueryOptions
 } from '../lib/validation';
-import { authenticate } from '../middleware/auth';
+import { authenticate, optionalAuth } from '../middleware/auth';
 
 const router: Router = Router();
 
@@ -186,7 +186,7 @@ router.post('/:communityId/posts', authenticate, async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.get('/:communityId/posts', async (req, res) => {
+router.get('/:communityId/posts', optionalAuth, async (req, res) => {
   try {
     const { communityId } = req.params;
     validatePaginationParams(req.query);
@@ -212,7 +212,7 @@ router.get('/:communityId/posts', async (req, res) => {
         [{ field: 'createdAt', order: 'desc' as const }]
     };
 
-    const result = await PostService.getCommunityPosts(communityId, options);
+    const result = await PostService.getCommunityPosts(communityId, options, req.user?.id);
     res.json({
       success: true,
       data: result.data,
@@ -267,7 +267,7 @@ router.get('/:communityId/posts', async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.get('/:communityId/posts/featured', async (req, res) => {
+router.get('/:communityId/posts/featured', optionalAuth, async (req, res) => {
   try {
     const { communityId } = req.params;
     validatePaginationParams(req.query);
@@ -283,7 +283,7 @@ router.get('/:communityId/posts/featured', async (req, res) => {
       sort: [{ field: 'createdAt', order: 'desc' as const }]
     };
 
-    const result = await PostService.getCommunityPosts(communityId, options);
+    const result = await PostService.getCommunityPosts(communityId, options, req.user?.id);
     res.json({
       success: true,
       data: result.data,
@@ -338,7 +338,7 @@ router.get('/:communityId/posts/featured', async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.get('/:communityId/posts/pinned', async (req, res) => {
+router.get('/:communityId/posts/pinned', optionalAuth, async (req, res) => {
   try {
     const { communityId } = req.params;
     validatePaginationParams(req.query);
@@ -354,7 +354,7 @@ router.get('/:communityId/posts/pinned', async (req, res) => {
       sort: [{ field: 'createdAt', order: 'desc' as const }]
     };
 
-    const result = await PostService.getCommunityPosts(communityId, options);
+    const result = await PostService.getCommunityPosts(communityId, options, req.user?.id);
     res.json({
       success: true,
       data: result.data,
@@ -409,7 +409,7 @@ router.get('/:communityId/posts/pinned', async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.get('/:communityId/posts/announcements', async (req, res) => {
+router.get('/:communityId/posts/announcements', optionalAuth, async (req, res) => {
   try {
     const { communityId } = req.params;
     validatePaginationParams(req.query);
@@ -425,7 +425,7 @@ router.get('/:communityId/posts/announcements', async (req, res) => {
       sort: [{ field: 'createdAt', order: 'desc' as const }]
     };
 
-    const result = await PostService.getCommunityPosts(communityId, options);
+    const result = await PostService.getCommunityPosts(communityId, options, req.user?.id);
     res.json({
       success: true,
       data: result.data,

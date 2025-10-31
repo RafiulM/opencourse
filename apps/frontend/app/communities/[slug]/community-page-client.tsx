@@ -1,6 +1,7 @@
 "use client"
 
 import type { ElementType } from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
@@ -26,6 +27,7 @@ import { useCommunityBySlug, useCommunityPreviewBySlug } from "@/hooks/use-commu
 import { useCourses } from "@/hooks/use-courses"
 import { useCommunityPosts } from "@/hooks/use-posts"
 import { CommunityHeader } from "./community-header"
+import { AutoJoinHandler } from "@/components/community/auto-join-handler"
 
 interface CommunityPageClientProps {
   communitySlug: string
@@ -147,14 +149,38 @@ export function CommunityPageClient({ communitySlug }: CommunityPageClientProps)
 
   return (
     <div className="bg-background min-h-screen">
+      {/* Community Banner - thin, full width */}
+      {community?.banner && (
+        <div className="relative h-16 w-full overflow-hidden">
+          <Image
+            src={community.banner}
+            alt={`${community.name} banner`}
+            fill
+            className="object-cover"
+            priority
+          />
+          {/* Overlay gradient for better text readability */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
+        </div>
+      )}
+
       <Navbar />
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <CommunityHeader
           community={community}
+          showBanner={false} // Banner is now shown at the top of the page
           showRequestToJoin={shouldRestrictContent}
           onRequestToJoin={shouldRestrictContent ? handleRequestToJoin : undefined}
         />
+
+        {/* Auto-join handler for users redirected after login */}
+        {community && (
+          <AutoJoinHandler
+            communityId={community.id}
+            communityName={community.name}
+          />
+        )}
 
         <div className="mt-10 space-y-12">
           {shouldRestrictContent ? (

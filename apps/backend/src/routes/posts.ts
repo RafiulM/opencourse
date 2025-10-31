@@ -70,7 +70,7 @@ const router: Router = Router();
  *       500:
  *         description: Internal server error
  */
-router.get('/', authenticate, async (req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
   try {
     validatePaginationParams(req.query);
     validatePostQueryOptions(req.query);
@@ -93,7 +93,7 @@ router.get('/', authenticate, async (req, res) => {
         [{ field: 'createdAt', order: 'desc' as const }]
     };
 
-    const result = await PostService.getPosts(options);
+    const result = await PostService.getPosts(options, req.user?.id);
     res.json({
       success: true,
       data: result,
@@ -136,7 +136,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const post = await PostService.getPostById(id);
+    const post = await PostService.getPostById(id, req.user?.id);
 
     if (!post) {
       throw new AppError('Post not found', 404, 'RESOURCE_NOT_FOUND' as any);
@@ -567,7 +567,7 @@ router.get('/slug/:slug', optionalAuth, async (req, res) => {
     const { slug } = req.params;
     const { communityId } = req.query;
 
-    const post = await PostService.getPostBySlug(slug, communityId as string);
+    const post = await PostService.getPostBySlug(slug, communityId as string, req.user?.id);
 
     if (!post) {
       throw new AppError('Post not found', 404, 'RESOURCE_NOT_FOUND' as any);

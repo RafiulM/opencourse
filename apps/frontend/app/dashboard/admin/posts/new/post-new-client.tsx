@@ -11,21 +11,14 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { ArrowLeft, Save, Upload } from "lucide-react"
+import { ArrowLeft, Save } from "lucide-react"
 import Link from "next/link"
 import { useCreateCommunityPost } from "@/hooks/use-posts"
 import { useCommunities } from "@/hooks/use-communities"
 import { CreatePostRequest } from "@/lib/types"
 import { toast } from "sonner"
 import { useSession } from "@/lib/auth"
-import { PostForm, PostSettings, PostType, TagManager } from "@/components/post"
+import { PostForm, PostType } from "@/components/post"
 
 function NewPostPageContent() {
   const router = useRouter()
@@ -43,6 +36,11 @@ function NewPostPageContent() {
     attachments: [],
   })
   const [selectedCommunityId, setSelectedCommunityId] = useState("")
+  const [errors, setErrors] = useState<{
+    community?: string
+    title?: string
+    content?: string
+  }>({})
 
   const { data: session } = useSession()
   const userId = session?.user?.id
@@ -64,19 +62,44 @@ function NewPostPageContent() {
     }
   }, [searchParams, communities])
 
-  const handleSubmit = async (publish: boolean = false) => {
-    if (!selectedCommunityId) {
-      toast.error("Please select a community")
-      return
+  // Validate form and return errors
+  const validateForm = () => {
+    const newErrors: typeof errors = {}
+
+    if (!selectedCommunityId.trim()) {
+      newErrors.community = "Please select a community"
     }
 
     if (!formData.title.trim()) {
-      toast.error("Title is required")
-      return
+      newErrors.title = "Title is required"
     }
 
     if (!formData.content.trim()) {
-      toast.error("Content is required")
+      newErrors.content = "Content is required"
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  // Clear specific error when user starts typing
+  const clearError = (field: keyof typeof errors) => {
+    if (errors[field]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev }
+        delete newErrors[field]
+        return newErrors
+      })
+    }
+  }
+
+  const handleSubmit = async (publish: boolean = false) => {
+    // Validate form and show errors
+    if (!validateForm()) {
+      toast.error("Please fill in all required fields", {
+        description: "Title, content, and community selection are required.",
+        duration: 5000,
+      })
       return
     }
 
@@ -93,11 +116,20 @@ function NewPostPageContent() {
       })
 
       toast.success(
-        `Post ${publish ? "published" : "created as draft"} successfully`
+        `Post ${publish ? "published" : "created as draft"} successfully`,
+        {
+          description: publish
+            ? "Your post is now live and visible to community members."
+            : "Your post has been saved as a draft and can be published later.",
+          duration: 4000,
+        }
       )
       router.push("/dashboard/admin/posts")
     } catch (error) {
-      toast.error("Failed to create post")
+      toast.error("Failed to create post", {
+        description: "There was an error creating your post. Please try again.",
+        duration: 5000,
+      })
     } finally {
       setIsSubmitting(false)
     }
@@ -130,106 +162,39 @@ function NewPostPageContent() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Main Content */}
-        <div className="lg:col-span-2">
-          <PostForm
-            data={{
-              title: formData.title,
-              content: formData.content,
-              excerpt: formData.excerpt || "",
-            }}
-            onChange={(updates) =>
-              setFormData((prev) => ({ ...prev, ...updates }))
-            }
-            disabled={isSubmitting}
-          />
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Community Selection */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Community</CardTitle>
-              <CardDescription>
-                Select the community for this post
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Select
-                value={selectedCommunityId}
-                onValueChange={setSelectedCommunityId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a community" />
-                </SelectTrigger>
-                <SelectContent>
-                  {communities.map((community) => (
-                    <SelectItem key={community.id} value={community.id}>
-                      {community.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
-
-          {/* Post Settings */}
-          <PostSettings
-            postType={formData.postType as PostType}
-            onPostTypeChange={(postType) =>
-              setFormData((prev) => ({ ...prev, postType }))
-            }
-            allowComments={!!formData.allowComments}
-            onAllowCommentsChange={(allowComments) =>
-              setFormData((prev) => ({ ...prev, allowComments }))
-            }
-            visibility={formData.visibility || "community"}
-            onVisibilityChange={(visibility) =>
-              setFormData((prev) => ({ ...prev, visibility }))
-            }
-            isPublished={!!formData.isPublished}
-            onIsPublishedChange={(isPublished) =>
-              setFormData((prev) => ({ ...prev, isPublished }))
-            }
-          />
-
-          {/* Tags */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Tags</CardTitle>
-              <CardDescription>
-                Add tags to help users discover this post
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <TagManager
-                tags={formData.tags}
-                onTagsChange={(tags) =>
-                  setFormData((prev) => ({ ...prev, tags }))
-                }
-              />
-            </CardContent>
-          </Card>
-
-          {/* Attachments */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Attachments</CardTitle>
-              <CardDescription>
-                Add files to your post (coming soon)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" disabled className="w-full">
-                <Upload className="mr-2 h-4 w-4" />
-                Upload Files (Coming Soon)
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      {/* Full-width Editor */}
+      <PostForm
+        data={{
+          title: formData.title,
+          content: formData.content,
+          excerpt: formData.excerpt || "",
+          postType: formData.postType as PostType,
+          visibility: formData.visibility || "community",
+          allowComments: formData.allowComments,
+          isPublished: formData.isPublished,
+          tags: formData.tags,
+          communityId: selectedCommunityId,
+        }}
+        onChange={(updates) => {
+          setFormData((prev) => ({ ...prev, ...updates }))
+          // Update selectedCommunityId if communityId changes
+          if (updates.communityId) {
+            setSelectedCommunityId(updates.communityId)
+            clearError('community')
+          }
+          // Clear errors when user starts typing
+          if (updates.title) clearError('title')
+          if (updates.content) clearError('content')
+        }}
+        disabled={isSubmitting}
+        errors={{
+          title: errors.title,
+          content: errors.content,
+          community: errors.community,
+        }}
+        communities={communities}
+        showCommunity={true}
+      />
     </div>
   )
 }

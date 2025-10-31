@@ -86,6 +86,24 @@ export class ApiClient {
 
       if (!response.ok) {
         const errorText = await response.text();
+
+        // Handle visibility-based access control errors
+        if (response.status === 401) {
+          const error = new Error('Authentication required') as any;
+          error.status = 401;
+          error.code = 'AUTHENTICATION_REQUIRED';
+          error.message = 'You must be signed in to view this content';
+          throw error;
+        }
+
+        if (response.status === 403) {
+          const error = new Error('Access denied') as any;
+          error.status = 403;
+          error.code = 'ACCESS_DENIED';
+          error.message = 'You do not have permission to view this content';
+          throw error;
+        }
+
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
@@ -161,6 +179,23 @@ export class ApiClient {
 
   async deleteCommunity(id: string): Promise<ApiResponse<void>> {
     return this.request<ApiResponse<void>>(`/communities/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Community Memberships
+  async checkCommunityMembership(communityId: string): Promise<ApiResponse<{ isMember: boolean; role?: string }>> {
+    return this.request<ApiResponse<{ isMember: boolean; role?: string }>>(`/communities/${communityId}/membership`);
+  }
+
+  async joinCommunity(communityId: string): Promise<ApiResponse<void>> {
+    return this.request<ApiResponse<void>>(`/communities/${communityId}/members`, {
+      method: 'POST',
+    });
+  }
+
+  async leaveCommunity(communityId: string): Promise<ApiResponse<void>> {
+    return this.request<ApiResponse<void>>(`/communities/${communityId}/members`, {
       method: 'DELETE',
     });
   }

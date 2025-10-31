@@ -43,7 +43,9 @@ import {
   Users,
   Calendar,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  Lock,
+  Globe
 } from "lucide-react"
 import Link from "next/link"
 import { usePosts, useDeletePost, useTogglePinPost, useToggleFeaturePost, usePublishPost } from "@/hooks/use-posts"
@@ -54,6 +56,7 @@ export default function PostsPage() {
   const [search, setSearch] = useState("")
   const [postType, setPostType] = useState<string>("all")
   const [publishedStatus, setPublishedStatus] = useState<string>("all")
+  const [visibility, setVisibility] = useState<string>("all")
   const [page, setPage] = useState(1)
   const limit = 10
 
@@ -74,11 +77,12 @@ export default function PostsPage() {
 
   useEffect(() => {
     handlePageChange(1)
-  }, [postType, publishedStatus, search, handlePageChange])
+  }, [postType, publishedStatus, visibility, search, handlePageChange])
 
   const filters = {
     ...(postType !== "all" && { postType }),
     ...(publishedStatus !== "all" && { isPublished: publishedStatus === "published" }),
+    ...(visibility !== "all" && { visibility }),
   }
 
   const { data, isLoading, error } = usePosts({
@@ -185,6 +189,24 @@ export default function PostsPage() {
     )
   }
 
+  const getVisibilityBadge = (visibility: Post['visibility']) => {
+    if (visibility === 'community') {
+      return (
+        <Badge variant="secondary" className="flex items-center gap-1">
+          <Lock className="h-3 w-3" />
+          Community
+        </Badge>
+      )
+    }
+
+    return (
+      <Badge variant="outline" className="flex items-center gap-1">
+        <Globe className="h-3 w-3" />
+        Public
+      </Badge>
+    )
+  }
+
   if (error) {
     return (
       <Card>
@@ -259,6 +281,18 @@ export default function PostsPage() {
                   <SelectItem value="draft">Draft</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* Visibility Filter */}
+              <Select value={visibility} onValueChange={setVisibility}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Visibility" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Visibility</SelectItem>
+                  <SelectItem value="public">Public</SelectItem>
+                  <SelectItem value="community">Community Only</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Table */}
@@ -271,6 +305,7 @@ export default function PostsPage() {
                     <TableHead>Community</TableHead>
                     <TableHead>Author</TableHead>
                     <TableHead>Engagement</TableHead>
+                    <TableHead>Visibility</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
@@ -278,13 +313,13 @@ export default function PostsPage() {
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-6">
+                      <TableCell colSpan={8} className="text-center py-6">
                         Loading posts...
                       </TableCell>
                     </TableRow>
                   ) : showEmptyState ? (
                     <TableRow>
-                      <TableCell colSpan={7}>
+                      <TableCell colSpan={8}>
                         <div className="flex flex-col items-center justify-center py-12 text-center gap-4">
                           <FileText className="h-12 w-12 text-muted-foreground" />
                           <div className="space-y-1">
@@ -354,6 +389,9 @@ export default function PostsPage() {
                               {post.viewsCount}
                             </div>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          {getVisibilityBadge(post.visibility)}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center space-x-1">

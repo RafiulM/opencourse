@@ -15,6 +15,7 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { Post } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { PostVisibilityBadge } from "./access-control"
 
 interface PostViewProps {
   post: Post
@@ -96,6 +97,7 @@ export function PostView({ post, className }: PostViewProps) {
           <Badge variant="outline" className="text-xs capitalize">
             {post.postType}
           </Badge>
+          <PostVisibilityBadge visibility={post.visibility} />
         </div>
       </div>
 

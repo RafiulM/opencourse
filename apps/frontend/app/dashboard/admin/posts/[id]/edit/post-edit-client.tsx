@@ -10,15 +10,12 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
-import { ArrowLeft, Save, Eye, Upload, Loader2 } from "lucide-react"
+import { ArrowLeft, Save, Eye, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useUpdatePost, usePost } from "@/hooks/use-posts"
 import { UpdatePostRequest } from "@/lib/types"
 import { toast } from "sonner"
-import { PostForm, PostSettings, PostType, TagManager } from "@/components/post"
-import { Badge } from "@/components/ui/badge"
+import { PostForm, PostType } from "@/components/post"
 
 interface EditPostPageClientProps {
   id: string
@@ -177,131 +174,31 @@ export default function EditPostPageClient({ id }: EditPostPageClientProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Main Content */}
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Post Content</CardTitle>
-              <CardDescription>Edit your post content</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {isPreview ? (
-                <div className="min-h-[400px] rounded-lg border p-6">
-                  {renderPreview()}
-                </div>
-              ) : (
-                <PostForm
-                  data={{
-                    title: formData.title || "",
-                    content: formData.content || "",
-                    excerpt: formData.excerpt || "",
-                  }}
-                  onChange={(updates) =>
-                    setFormData((prev) => ({ ...prev, ...updates }))
-                  }
-                  disabled={isSubmitting}
-                />
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Post Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Post Information</CardTitle>
-              <CardDescription>Current post details</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label className="text-sm font-medium">Community</Label>
-                <p className="text-muted-foreground text-sm">
-                  {post.community?.name}
-                </p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium">Author</Label>
-                <p className="text-muted-foreground text-sm">
-                  {post.author?.name}
-                </p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium">Created</Label>
-                <p className="text-muted-foreground text-sm">
-                  {new Date(post.createdAt).toLocaleDateString()}
-                </p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium">Last Updated</Label>
-                <p className="text-muted-foreground text-sm">
-                  {new Date(post.updatedAt).toLocaleDateString()}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Post Settings */}
-          <PostSettings
-            postType={formData.postType as PostType}
-            onPostTypeChange={(postType) =>
-              setFormData((prev) => ({ ...prev, postType }))
+  {/* Full-width Editor */}
+      <div className="space-y-6">
+        {isPreview ? (
+          <div className="min-h-[400px] rounded-lg border bg-background p-6">
+            {renderPreview()}
+          </div>
+        ) : (
+          <PostForm
+            data={{
+              title: formData.title || "",
+              content: formData.content || "",
+              excerpt: formData.excerpt || "",
+              postType: formData.postType as PostType,
+              visibility: formData.visibility || "community",
+              allowComments: formData.allowComments,
+              isPublished: formData.isPublished,
+              tags: formData.tags,
+              communityName: post.community?.name,
+            }}
+            onChange={(updates) =>
+              setFormData((prev) => ({ ...prev, ...updates }))
             }
-            allowComments={!!formData.allowComments}
-            onAllowCommentsChange={(allowComments) =>
-              setFormData((prev) => ({ ...prev, allowComments }))
-            }
-            visibility={formData.visibility || "community"}
-            onVisibilityChange={(visibility) =>
-              setFormData((prev) => ({ ...prev, visibility }))
-            }
-            isPublished={!!formData.isPublished}
-            onIsPublishedChange={(isPublished) =>
-              setFormData((prev) => ({ ...prev, isPublished }))
-            }
+            disabled={isSubmitting}
           />
-
-          {/* Tags */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Tags</CardTitle>
-              <CardDescription>
-                Add tags to help users discover this post
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <TagManager
-                tags={formData.tags || []}
-                onTagsChange={(tags) =>
-                  setFormData((prev) => ({ ...prev, tags }))
-                }
-              />
-            </CardContent>
-          </Card>
-
-          {/* Attachments */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Attachments</CardTitle>
-              <CardDescription>
-                Manage files attached to this post (coming soon)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" disabled className="w-full">
-                <Upload className="mr-2 h-4 w-4" />
-                Manage Files (Coming Soon)
-              </Button>
-              {post.attachments && post.attachments.length > 0 && (
-                <p className="text-muted-foreground mt-2 text-sm">
-                  {post.attachments.length} file(s) attached
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        )}
       </div>
     </div>
   )

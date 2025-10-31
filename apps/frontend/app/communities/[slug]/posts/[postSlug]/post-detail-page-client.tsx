@@ -16,6 +16,7 @@ import { useCommunityBySlug } from "@/hooks/use-communities"
 import { usePostBySlug } from "@/hooks/use-post"
 import { Navbar } from "@/components/navbar"
 import { PostView } from "@/components/post/post-view"
+import { PostErrorBoundary, usePostErrorHandler } from "@/components/post/post-error-boundary"
 
 interface PostDetailPageClientProps {
   communitySlug: string
@@ -27,6 +28,7 @@ export function PostDetailPageClient({ communitySlug, postSlug }: PostDetailPage
     useCommunityBySlug(communitySlug)
   const community = communityData?.data
   const communityId = community?.id
+  const { handlePostError } = usePostErrorHandler()
   const {
     data: postData,
     isLoading: postLoading,
@@ -34,6 +36,29 @@ export function PostDetailPageClient({ communitySlug, postSlug }: PostDetailPage
   } = usePostBySlug(postSlug, communityId, !!communityId)
 
   const post = postData
+
+  // Handle visibility-based access errors
+  if (postError) {
+    const errorComponent = handlePostError(postError, community?.name, communityId)
+    if (errorComponent) {
+      return (
+        <div className="bg-background min-h-screen">
+          <Navbar />
+          <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+            <div className="mb-6">
+              <Link href={`/communities/${communitySlug}/posts`}>
+                <Button variant="ghost" size="sm">
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back to Posts in {community?.name || 'Community'}
+                </Button>
+              </Link>
+            </div>
+            {errorComponent}
+          </div>
+        </div>
+      )
+    }
+  }
 
   if (communityLoading || postLoading) {
     return (
@@ -141,7 +166,12 @@ export function PostDetailPageClient({ communitySlug, postSlug }: PostDetailPage
         </div>
 
         {/* Post Content */}
-        <PostView post={post} />
+        <PostErrorBoundary
+          communityName={community.name}
+          communityId={communityId}
+        >
+          <PostView post={post} />
+        </PostErrorBoundary>
       </div>
     </div>
   )

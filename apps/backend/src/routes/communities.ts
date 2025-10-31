@@ -492,9 +492,9 @@ router.get('/user/:userId', authenticate, async (req, res) => {
 
 /**
  * @swagger
- * /api/communities/{id}/members:
- *   post:
- *     summary: Add member to community
+ * /api/communities/{id}/membership:
+ *   get:
+ *     summary: Check current user's membership status in a community
  *     tags: [Community Members]
  *     parameters:
  *       - in: path
@@ -502,35 +502,149 @@ router.get('/user/:userId', authenticate, async (req, res) => {
  *         required: true
  *         schema:
  *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [userId]
- *             properties:
- *               userId:
- *                 type: string
- *               role:
- *                 type: string
- *                 enum: [owner, moderator, member]
- *                 default: member
+ *     responses:
+ *       200:
+ *         description: Membership status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     isMember:
+ *                       type: boolean
+ *                     role:
+ *                       type: string
+ *                       enum: [owner, moderator, member]
+ *       401:
+ *         description: Authentication required
+ *       404:
+ *         description: Community not found
+ */
+router.get('/:id/membership', authenticate, async (req, res) => {
+  try {
+    const membership = await CommunityMemberService.getMemberByUserAndCommunity(
+      req.user!.id,
+      req.params.id
+    );
+
+    res.json({
+      success: true,
+      data: {
+        isMember: !!membership,
+        role: membership?.role || null
+      }
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
+  }
+});
+
+/**
+ * @swagger
+ * /api/communities/{id}/members:
+ *   delete:
+ *     summary: Leave a community (self-leave)
+ *     tags: [Community Members]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Successfully left community
+ *       401:
+ *         description: Authentication required
+ *       404:
+ *         description: Community not found or not a member
+ */
+router.delete('/:id/members', authenticate, async (req, res) => {
+  try {
+    const membership = await CommunityMemberService.getMemberByUserAndCommunity(
+      req.user!.id,
+      req.params.id
+    );
+
+    if (!membership) {
+      const errorResponse = formatErrorResponse(
+        new AppError('You are not a member of this community', 404, 'RESOURCE_NOT_FOUND' as any)
+      );
+      return res.status(404).json(errorResponse);
+    }
+
+    await CommunityMemberService.removeMember(membership.id, req.user!.id);
+
+    res.json({
+      success: true,
+      message: 'Successfully left community'
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
+  }
+});
+
+/**
+ * @swagger
+ * /api/communities/{id}/members:
+ *   post:
+ *     summary: Add member to community (self-join)
+ *     tags: [Community Members]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
  *     responses:
  *       201:
  *         description: Member added successfully
+ *       401:
+ *         description: Authentication required
+ *       400:
+ *         description: Already a member or cannot join this community
  */
 router.post('/:id/members', authenticate, async (req, res) => {
   try {
-    validateAddMemberData(req.body);
-    
+    // Check if user is already a member
+    const existingMembership = await CommunityMemberService.getMemberByUserAndCommunity(
+      req.user!.id,
+      req.params.id
+    );
+
+    if (existingMembership) {
+      const errorResponse = formatErrorResponse(
+        new AppError('You are already a member of this community', 400, 'ALREADY_MEMBER' as any)
+      );
+      return res.status(400).json(errorResponse);
+    }
+
     // Add authenticated user to community (self-join)
     const memberData = {
       communityId: req.params.id,
       userId: req.user!.id,
-      role: req.body.role || 'member'
+      role: 'member' as const
     };
-    
+
     const member = await CommunityMemberService.addMember(memberData);
     res.status(201).json({
       success: true,
@@ -542,7 +656,7 @@ router.post('/:id/members', authenticate, async (req, res) => {
       const errorResponse = formatErrorResponse(error);
       return res.status(error.statusCode).json(errorResponse);
     }
-    
+
     const dbError = handleDatabaseError(error);
     const errorResponse = formatErrorResponse(dbError);
     res.status(dbError.statusCode).json(errorResponse);
