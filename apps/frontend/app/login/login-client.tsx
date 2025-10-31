@@ -5,7 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { signInWithGoogle } from "../../lib/auth"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Chrome } from "lucide-react"
 
@@ -21,8 +27,8 @@ export default function LoginPageClient() {
     setError("")
 
     try {
-      // Use the return URL from search params, or default to dashboard
-      const callbackUrl = returnUrl || "/dashboard/admin"
+      // Use the return URL from search params, or default to home page
+      const callbackUrl = returnUrl || "/"
       const result = await signInWithGoogle(callbackUrl)
 
       if (result.error) {
@@ -36,13 +42,18 @@ export default function LoginPageClient() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="bg-background flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Sign in to your account</CardTitle>
+          <CardTitle className="text-center text-2xl font-bold">
+            Sign in to your account
+          </CardTitle>
           <CardDescription className="text-center">
             Or{" "}
-            <Link href="/signup" className="font-medium text-primary hover:underline">
+            <Link
+              href="/signup"
+              className="text-primary font-medium hover:underline"
+            >
               create a new account
             </Link>
           </CardDescription>
@@ -65,7 +76,9 @@ export default function LoginPageClient() {
             ) : (
               <Chrome className="mr-2 h-4 w-4" />
             )}
-            {googleLoading ? "Signing in with Google..." : "Sign in with Google"}
+            {googleLoading
+              ? "Signing in with Google..."
+              : "Sign in with Google"}
           </Button>
         </CardContent>
       </Card>

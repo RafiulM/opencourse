@@ -101,14 +101,12 @@ export function CommunityPageClient({
 
   const posts = postsData?.data ?? []
 
-  console.log("posts", posts, postsData)
-
   const isCommunityLoading =
     communityLoading || (communityError ? previewLoading : false)
 
   // Handle join request from URL parameters
   useEffect(() => {
-    if (searchParams?.get('request') === 'join' && community) {
+    if (searchParams?.get("request") === "join" && community) {
       setShowJoinPrompt(true)
     }
   }, [searchParams, community])

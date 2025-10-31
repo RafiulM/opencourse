@@ -11,8 +11,10 @@ export const auth: ReturnType<typeof betterAuth> = betterAuth({
   // Set base URL for production to help with cookie domain and redirects
   // This should be the backend URL where Better Auth is hosted
   baseURL: isProduction
-    ? process.env.BETTER_AUTH_URL || process.env.BACKEND_URL || "https://api.opencourse.id"
-    : "http://localhost:5006",
+    ? process.env.BETTER_AUTH_URL ||
+      process.env.BACKEND_URL ||
+      "https://api.opencourse.id"
+    : process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5005}`,
   // Explicit base path for auth endpoints
   basePath: "/api/auth",
   emailAndPassword: {
@@ -24,10 +26,10 @@ export const auth: ReturnType<typeof betterAuth> = betterAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
       redirectUri:
         process.env.GOOGLE_REDIRECT_URI ||
-        "http://localhost:5006/api/auth/callback/google",
+        `http://localhost:${process.env.PORT || 5005}/api/auth/callback/google`,
     },
   },
-  advanced:{
+  advanced: {
     // Enable cross-subdomain cookies for production (api.opencourse.id -> app.opencourse.id)
     ...(isProduction && {
       crossSubDomainCookies: {
@@ -38,12 +40,12 @@ export const auth: ReturnType<typeof betterAuth> = betterAuth({
     // Different cookie settings for development vs production
     defaultCookieAttributes: isProduction
       ? {
-          sameSite: 'None', // Required for cross-subdomain cookies
+          sameSite: "None", // Required for cross-subdomain cookies
           secure: true, // Required for SameSite=None (HTTPS only)
           path: "/", // Explicit path for cookies
         }
       : {
-          sameSite: 'Lax', // More flexible for localhost development
+          sameSite: "Lax", // More flexible for localhost development
           secure: false, // HTTP cookies (localhost)
           path: "/", // Explicit path for cookies
         },
@@ -55,5 +57,5 @@ export const auth: ReturnType<typeof betterAuth> = betterAuth({
     "https://app.opencourse.id",
     "https://api.opencourse.id",
     ...(process.env.TRUSTED_ORIGINS?.split(",") || []),
-  ]
+  ],
 })

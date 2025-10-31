@@ -23,7 +23,9 @@ export async function requireAuth() {
       : requestUrl
 
     // Redirect to login page with return URL as search param
-    const loginUrl = returnUrl ? `/login?returnUrl=${encodeURIComponent(returnUrl)}` : "/login"
+    const loginUrl = returnUrl
+      ? `/login?returnUrl=${encodeURIComponent(returnUrl)}`
+      : "/login"
     redirect(loginUrl)
   }
 
@@ -53,7 +55,7 @@ export async function handleLoginRedirect(returnUrl?: string) {
   if (returnUrl) {
     redirect(returnUrl)
   } else {
-    // Default redirect after login
-    redirect("/dashboard/admin")
+    // Default redirect after login - go to home page
+    redirect("/")
   }
 }
