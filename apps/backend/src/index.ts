@@ -1,7 +1,6 @@
 import express from "express"
 import cors from "cors"
 import helmet from "helmet"
-import morgan from "morgan"
 import "dotenv/config"
 import { toNodeHandler } from "better-auth/node"
 import { auth } from "./lib/auth"
@@ -142,15 +141,9 @@ app.use(
 
 app.all("/api/auth/*", toNodeHandler(auth))
 
-// Enhanced logging middleware
+// Minimal logging middleware - only errors are logged
 app.use(requestLogger)
-app.use(morgan("combined", {
-  stream: {
-    write: (message: string) => {
-      console.log(`[MORGAN] ${message.trim()}`)
-    }
-  }
-}))
+// Morgan disabled - only errors are logged
 app.use(responseLogger)
 
 app.use(express.json())
