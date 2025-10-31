@@ -851,4 +851,113 @@ router.delete('/:id/members/:memberId', authenticate, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/communities/{id}/reconcile-member-count:
+ *   post:
+ *     summary: Reconcile member count for a specific community
+ *     description: Checks and fixes any discrepancies between the cached member count and actual member count
+ *     tags: [Community Management]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Member count reconciliation completed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     fixed:
+ *                       type: boolean
+ *                       description: Whether the member count was fixed
+ *                     cachedCount:
+ *                       type: integer
+ *                       description: The previous cached member count
+ *                     actualCount:
+ *                       type: integer
+ *                       description: The actual member count
+ *       404:
+ *         description: Community not found
+ */
+router.post('/:id/reconcile-member-count', authenticate, async (req, res) => {
+  try {
+    const result = await CommunityService.reconcileMemberCount(req.params.id);
+
+    res.json({
+      success: true,
+      data: result,
+      message: result.fixed
+        ? `Member count fixed: ${result.cachedCount} → ${result.actualCount}`
+        : 'Member count is already accurate'
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
+  }
+});
+
+/**
+ * @swagger
+ * /api/communities/reconcile-all-member-counts:
+ *   post:
+ *     summary: Reconcile member counts for all communities
+ *     description: Checks and fixes any discrepancies between cached member counts and actual member counts for all communities
+ *     tags: [Community Management]
+ *     responses:
+ *       200:
+ *         description: Member count reconciliation completed for all communities
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     totalCommunities:
+ *                       type: integer
+ *                       description: Total number of communities checked
+ *                     fixedCommunities:
+ *                       type: integer
+ *                       description: Number of communities that were fixed
+ */
+router.post('/reconcile-all-member-counts', authenticate, async (req, res) => {
+  try {
+    const result = await CommunityService.reconcileAllMemberCounts();
+
+    res.json({
+      success: true,
+      data: result,
+      message: `Reconciliation complete: ${result.fixedCommunities}/${result.totalCommunities} communities fixed`
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(error.statusCode).json(errorResponse);
+    }
+
+    const dbError = handleDatabaseError(error);
+    const errorResponse = formatErrorResponse(dbError);
+    res.status(dbError.statusCode).json(errorResponse);
+  }
+});
+
 export default router;

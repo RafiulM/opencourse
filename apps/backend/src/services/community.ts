@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { communities, communityMembers, communityRoleEnum, communityPrivacyEnum } from '../db/schema/community';
-import { eq, and, desc, asc, count, ilike, gte, lte, or } from 'drizzle-orm';
+import { eq, and, desc, asc, count, ilike, gte, lte, or, sql } from 'drizzle-orm';
 
 export interface CreateCommunityData {
   name: string;
@@ -327,25 +327,122 @@ export class CommunityService {
       .where(eq(communityMembers.userId, userId))
       .orderBy(desc(communityMembers.joinedAt));
   }
+
+  // Reconcile Member Count
+  static async reconcileMemberCount(communityId: string): Promise<{ fixed: boolean; cachedCount: number; actualCount: number }> {
+    // Get current cached member count
+    const [community] = await db.select({ memberCount: communities.memberCount })
+      .from(communities)
+      .where(eq(communities.id, communityId))
+      .limit(1);
+
+    if (!community) {
+      throw new Error('Community not found');
+    }
+
+    // Calculate actual member count
+    const [actualCountResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(communityMembers)
+      .where(eq(communityMembers.communityId, communityId));
+
+    const actualCount = Number(actualCountResult?.count || 0);
+    const cachedCount = community.memberCount;
+
+    // If counts don't match, update the cached count
+    if (actualCount !== cachedCount) {
+      await db
+        .update(communities)
+        .set({ memberCount: actualCount })
+        .where(eq(communities.id, communityId));
+
+      return { fixed: true, cachedCount, actualCount };
+    }
+
+    return { fixed: false, cachedCount, actualCount };
+  }
+
+  // Reconcile All Member Counts
+  static async reconcileAllMemberCounts(): Promise<{ totalCommunities: number; fixedCommunities: number }> {
+    // Get all communities
+    const allCommunities = await db.select({
+      id: communities.id,
+      name: communities.name,
+      slug: communities.slug,
+      cachedMemberCount: communities.memberCount,
+    }).from(communities);
+
+    let fixedCount = 0;
+
+    for (const community of allCommunities) {
+      // Calculate actual member count
+      const [actualCountResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(communityMembers)
+        .where(eq(communityMembers.communityId, community.id));
+
+      const actualCount = Number(actualCountResult?.count || 0);
+      const cachedCount = community.cachedMemberCount;
+
+      // If there's a discrepancy, update the cached count
+      if (actualCount !== cachedCount) {
+        await db
+          .update(communities)
+          .set({ memberCount: actualCount })
+          .where(eq(communities.id, community.id));
+
+        fixedCount++;
+      }
+    }
+
+    return {
+      totalCommunities: allCommunities.length,
+      fixedCommunities: fixedCount
+    };
+  }
 }
 
 // Community Member CRUD Operations
 export class CommunityMemberService {
   // Add Member to Community
   static async addMember(data: CreateCommunityMemberData) {
-    const [member] = await db.insert(communityMembers)
-      .values(data)
-      .returning();
+    // Use transaction to ensure data consistency
+    return await db.transaction(async (tx) => {
+      // Check if user is already a member
+      const existingMember = await tx.select()
+        .from(communityMembers)
+        .where(and(
+          eq(communityMembers.communityId, data.communityId),
+          eq(communityMembers.userId, data.userId)
+        ))
+        .limit(1);
 
-    // Update member count
-    await db.update(communities)
-      .set({
-        memberCount: count(communityMembers.id),
-        updatedAt: new Date(),
-      })
-      .where(eq(communities.id, data.communityId));
+      if (existingMember.length > 0) {
+        throw new Error('User is already a member of this community');
+      }
 
-    return member;
+      // Add the member
+      const [member] = await tx.insert(communityMembers)
+        .values(data)
+        .returning();
+
+      // Calculate and update the new member count
+      const [countResult] = await tx
+        .select({ count: sql<number>`count(*)` })
+        .from(communityMembers)
+        .where(eq(communityMembers.communityId, data.communityId));
+
+      const newMemberCount = Number(countResult?.count || 0);
+
+      await tx.update(communities)
+        .set({
+          memberCount: newMemberCount,
+          updatedAt: new Date(),
+        })
+        .where(eq(communities.id, data.communityId));
+
+      return member;
+    });
   }
 
   // Get Community Members
@@ -423,44 +520,61 @@ export class CommunityMemberService {
 
   // Remove Member from Community
   static async removeMember(id: string, requestUserId: string) {
-    // Get the member to be removed
-    const [targetMember] = await db.select()
-      .from(communityMembers)
-      .where(eq(communityMembers.id, id))
-      .limit(1);
+    // Use transaction to ensure data consistency
+    return await db.transaction(async (tx) => {
+      // Get the member to be removed
+      const [targetMember] = await tx.select()
+        .from(communityMembers)
+        .where(eq(communityMembers.id, id))
+        .limit(1);
 
-    if (!targetMember) {
-      return null;
-    }
+      if (!targetMember) {
+        return null;
+      }
 
-    // Check if requesting user is removing themselves or is owner/moderator
-    const requestMember = await CommunityMemberService.getMemberByUserAndCommunity(requestUserId, targetMember.communityId);
+      // Check if requesting user is removing themselves or is owner/moderator
+      const requestMember = await tx.select()
+        .from(communityMembers)
+        .where(and(
+          eq(communityMembers.userId, requestUserId),
+          eq(communityMembers.communityId, targetMember.communityId)
+        ))
+        .limit(1);
 
-    // Users can remove themselves, owners can remove anyone, moderators can remove non-owners
-    const canRemove =
-      targetMember.userId === requestUserId || // removing themselves
-      (requestMember && requestMember.role === 'owner') || // owner removing anyone
-      (requestMember && requestMember.role === 'moderator' && targetMember.role !== 'owner'); // moderator removing non-owner
+      // Users can remove themselves, owners can remove anyone, moderators can remove non-owners
+      const canRemove =
+        targetMember.userId === requestUserId || // removing themselves
+        (requestMember && requestMember[0]?.role === 'owner') || // owner removing anyone
+        (requestMember && requestMember[0]?.role === 'moderator' && targetMember.role !== 'owner'); // moderator removing non-owner
 
-    if (!canRemove) {
-      throw new Error('Unauthorized: You cannot remove this member');
-    }
+      if (!canRemove) {
+        throw new Error('Unauthorized: You cannot remove this member');
+      }
 
-    const [member] = await db.delete(communityMembers)
-      .where(eq(communityMembers.id, id))
-      .returning();
+      // Delete the member
+      const [member] = await tx.delete(communityMembers)
+        .where(eq(communityMembers.id, id))
+        .returning();
 
-    if (member) {
-      // Update member count
-      await db.update(communities)
-        .set({
-          memberCount: count(communityMembers.id),
-          updatedAt: new Date(),
-        })
-        .where(eq(communities.id, member.communityId));
-    }
+      if (member) {
+        // Calculate and update the new member count
+        const [countResult] = await tx
+          .select({ count: sql<number>`count(*)` })
+          .from(communityMembers)
+          .where(eq(communityMembers.communityId, member.communityId));
 
-    return member;
+        const newMemberCount = Number(countResult?.count || 0);
+
+        await tx.update(communities)
+          .set({
+            memberCount: newMemberCount,
+            updatedAt: new Date(),
+          })
+          .where(eq(communities.id, member.communityId));
+      }
+
+      return member;
+    });
   }
 
   // Check if User is Member of Community

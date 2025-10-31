@@ -87,8 +87,11 @@ export interface PaginatedResponse<T> {
 
 class PostService {
   // Helper method to check if user is a community member
-  static async isCommunityMember(userId: string, communityId: string): Promise<boolean> {
-    if (!userId) return false;
+  static async isCommunityMember(
+    userId: string,
+    communityId: string
+  ): Promise<boolean> {
+    if (!userId) return false
 
     const membership = await db
       .select()
@@ -99,9 +102,9 @@ class PostService {
           eq(communityMembers.userId, userId)
         )
       )
-      .limit(1);
+      .limit(1)
 
-    return membership.length > 0;
+    return membership.length > 0
   }
 
   // Create new post with attachments in community
@@ -110,13 +113,16 @@ class PostService {
     communityId: string,
     data: CreatePostData
   ) {
-    const startTime = Date.now();
+    const startTime = Date.now()
 
     try {
-      logApiCall('PostService', 'createPost', { authorId, communityId, data });
+      logApiCall("PostService", "createPost", { authorId, communityId, data })
 
       // Verify user is member of community
-      logDatabaseOperation('SELECT', 'community_members', { communityId, userId: authorId });
+      logDatabaseOperation("SELECT", "community_members", {
+        communityId,
+        userId: authorId,
+      })
 
       const membership = await db
         .select()
@@ -129,107 +135,144 @@ class PostService {
         )
         .limit(1)
 
-      logDatabaseOperation('SELECT', 'community_members', { result: `Found ${membership.length} memberships` });
+      logDatabaseOperation("SELECT", "community_members", {
+        result: `Found ${membership.length} memberships`,
+      })
 
       if (membership.length === 0) {
-        const error = new Error("User must be a member of the community to create posts");
-        logApiCall('PostService', 'createPost', { authorId, communityId, data }, null, error);
-        throw error;
-      }
-
-    // Check if user can create this type of post
-    if (data.postType === "announcement") {
-      const userRole = membership[0].role
-      if (userRole !== "owner" && userRole !== "moderator") {
         const error = new Error(
-          "Only community owners and moderators can create announcements"
-        );
-        logApiCall('PostService', 'createPost', { authorId, communityId, data, userRole }, null, error);
-        throw error;
+          "User must be a member of the community to create posts"
+        )
+        logApiCall(
+          "PostService",
+          "createPost",
+          { authorId, communityId, data },
+          null,
+          error
+        )
+        throw error
       }
-    }
 
-    // Generate slug if not provided but title is available
-    let finalSlug = data.slug
-    if (!finalSlug && data.title) {
-      logDatabaseOperation('SELECT', 'posts', { operation: 'slug uniqueness check', communityId });
+      // Check if user can create this type of post
+      if (data.postType === "announcement") {
+        const userRole = membership[0].role
+        if (userRole !== "owner" && userRole !== "moderator") {
+          const error = new Error(
+            "Only community owners and moderators can create announcements"
+          )
+          logApiCall(
+            "PostService",
+            "createPost",
+            { authorId, communityId, data, userRole },
+            null,
+            error
+          )
+          throw error
+        }
+      }
 
-      finalSlug = await generateUniqueCommunitySlug(
-        data.title,
-        communityId,
-        async (slug: string, cid: string) => {
-          const existing = await db
-            .select({ id: posts.id })
-            .from(posts)
-            .where(
-              and(
-                eq(posts.slug, slug),
-                eq(posts.communityId, cid),
-                isNull(posts.deletedAt)
+      // Generate slug if not provided but title is available
+      let finalSlug = data.slug
+      if (!finalSlug && data.title) {
+        logDatabaseOperation("SELECT", "posts", {
+          operation: "slug uniqueness check",
+          communityId,
+        })
+
+        finalSlug = await generateUniqueCommunitySlug(
+          data.title,
+          communityId,
+          async (slug: string, cid: string) => {
+            const existing = await db
+              .select({ id: posts.id })
+              .from(posts)
+              .where(
+                and(
+                  eq(posts.slug, slug),
+                  eq(posts.communityId, cid),
+                  isNull(posts.deletedAt)
+                )
               )
-            )
-            .limit(1)
-          return existing.length > 0
+              .limit(1)
+            return existing.length > 0
+          }
+        )
+
+        logDatabaseOperation("SELECT", "posts", {
+          operation: "slug generated",
+          slug: finalSlug,
+        })
+      }
+
+      const now = new Date()
+      const publishedAt = data.isPublished !== false ? now : null
+
+      const postData = {
+        communityId,
+        authorId,
+        title: data.title,
+        content: data.content,
+        excerpt: data.excerpt,
+        postType: data.postType || "general",
+        tags: data.tags || [],
+        allowComments: data.allowComments !== false,
+        visibility: data.visibility || "community",
+        isPublished: data.isPublished !== false,
+        isPinned: false,
+        isFeatured: false,
+        slug: finalSlug,
+        publishedAt,
+        metadata: {},
+        createdAt: now,
+        updatedAt: now,
+      }
+
+      logDatabaseOperation("INSERT", "posts", postData)
+
+      const [post] = await db.insert(posts).values(postData).returning()
+
+      logDatabaseOperation("INSERT", "posts", {
+        result: `Post created with ID: ${post.id}`,
+      })
+
+      // Handle attachments if provided
+      if (data.attachments && data.attachments.length > 0) {
+        logDatabaseOperation("INSERT", "post_attachments", {
+          postId: post.id,
+          attachmentsCount: data.attachments.length,
+        })
+        await PostAttachmentService.addAttachments(post.id, data.attachments)
+      }
+
+      const result = await this.getPostById(post.id, authorId)
+      const duration = Date.now() - startTime
+
+      logApiCall(
+        "PostService",
+        "createPost",
+        { authorId, communityId, data },
+        {
+          postId: post.id,
+          duration: `${duration}ms`,
+          success: true,
         }
       )
 
-      logDatabaseOperation('SELECT', 'posts', { operation: 'slug generated', slug: finalSlug });
-    }
-
-    const now = new Date()
-    const publishedAt = data.isPublished !== false ? now : null
-
-    const postData = {
-      communityId,
-      authorId,
-      title: data.title,
-      content: data.content,
-      excerpt: data.excerpt,
-      postType: data.postType || "general",
-      tags: data.tags || [],
-      allowComments: data.allowComments !== false,
-      visibility: data.visibility || "community",
-      isPublished: data.isPublished !== false,
-      isPinned: false,
-      isFeatured: false,
-      slug: finalSlug,
-      publishedAt,
-      metadata: {},
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    logDatabaseOperation('INSERT', 'posts', postData);
-
-    const [post] = await db
-      .insert(posts)
-      .values(postData)
-      .returning()
-
-    logDatabaseOperation('INSERT', 'posts', { result: `Post created with ID: ${post.id}` });
-
-    // Handle attachments if provided
-    if (data.attachments && data.attachments.length > 0) {
-      logDatabaseOperation('INSERT', 'post_attachments', { postId: post.id, attachmentsCount: data.attachments.length });
-      await PostAttachmentService.addAttachments(post.id, data.attachments)
-    }
-
-    const result = await this.getPostById(post.id, authorId);
-    const duration = Date.now() - startTime;
-
-    logApiCall('PostService', 'createPost', { authorId, communityId, data }, {
-      postId: post.id,
-      duration: `${duration}ms`,
-      success: true
-    });
-
-    return result
-
+      return result
     } catch (error) {
-      const duration = Date.now() - startTime;
-      logApiCall('PostService', 'createPost', { authorId, communityId, data }, null, error as Error);
-      logDatabaseOperation('INSERT', 'posts', { error: (error as Error).message, duration: `${duration}ms` });
-      throw error;
+      const duration = Date.now() - startTime
+      logApiCall(
+        "PostService",
+        "createPost",
+        { authorId, communityId, data },
+        null,
+        error as Error
+      )
+      logDatabaseOperation("INSERT", "posts", {
+        error: (error as Error).message,
+        duration: `${duration}ms`,
+      })
+      throw error
     }
   }
 
@@ -249,14 +292,84 @@ class PostService {
 
     const offset = (page - 1) * pageSize
 
+    // Check if user is a community member
+    let isMember = false
+    if (userId) {
+      isMember = await this.isCommunityMember(userId, communityId)
+    }
+
+    // Build all filter conditions first
+    const allConditions: SQL[] = [
+      eq(posts.communityId, communityId),
+      isNull(posts.deletedAt),
+    ]
+
+    // Only filter by isPublished if it's specified, otherwise default to published posts
+    if (filters.isPublished !== undefined) {
+      allConditions.push(eq(posts.isPublished, filters.isPublished))
+    } else {
+      allConditions.push(eq(posts.isPublished, true)) // Default to published posts
+    }
+
+    // Add visibility filtering
+    // Non-members can see public and community posts, but not private posts
+    // Members can see all posts
+    if (!isMember) {
+      allConditions.push(
+        or(eq(posts.visibility, "public"), eq(posts.visibility, "community"))
+      )
+    }
+
+    // Apply additional filters
+    if (filters.authorId) {
+      allConditions.push(eq(posts.authorId, filters.authorId))
+    }
+    if (filters.postType) {
+      allConditions.push(eq(posts.postType, filters.postType as any))
+    }
+    if (filters.isPinned !== undefined) {
+      allConditions.push(eq(posts.isPinned, filters.isPinned))
+    }
+    if (filters.isFeatured !== undefined) {
+      allConditions.push(eq(posts.isFeatured, filters.isFeatured))
+    }
+    if (filters.tags && filters.tags.length > 0) {
+      allConditions.push(
+        or(...filters.tags.map((tag) => ilike(posts.tags, `%${tag}%`)))
+      )
+    }
+    if (filters.createdAt) {
+      if (filters.createdAt.start) {
+        allConditions.push(gte(posts.createdAt, filters.createdAt.start))
+      }
+      if (filters.createdAt.end) {
+        allConditions.push(lte(posts.createdAt, filters.createdAt.end))
+      }
+    }
+
+    // Apply search
+    if (search) {
+      allConditions.push(
+        or(
+          ilike(posts.title, `%${search}%`),
+          ilike(posts.content, `%${search}%`),
+          ilike(posts.excerpt, `%${search}%`)
+        )
+      )
+    }
+
+    // Filter out any null/undefined conditions
+    const validConditions = allConditions.filter((cond) => cond != null)
+
+    // Build the query with all conditions at once
     const query = db
       .select({
         id: posts.id,
         communityId: posts.communityId,
         authorId: posts.authorId,
         title: posts.title,
-        content: posts.content,
-        excerpt: posts.excerpt,
+        content: isMember ? posts.content : sql`NULL`.as("content"), // Only return content for members
+        excerpt: isMember ? posts.excerpt : sql`NULL`.as("excerpt"), // Also hide excerpt for non-members
         slug: posts.slug,
         postType: posts.postType,
         tags: posts.tags,
@@ -288,146 +401,85 @@ class PostService {
       .from(posts)
       .innerJoin(user, eq(posts.authorId, user.id))
       .innerJoin(communities, eq(posts.communityId, communities.id))
-      .$dynamic()
+      .where(and(...validConditions))
 
-    // Apply base conditions
-    const baseConditions = [
+    // Get total count - build all conditions together
+    const allCountConditions = [
       eq(posts.communityId, communityId),
-      eq(posts.isPublished, true),
       isNull(posts.deletedAt),
     ]
 
-    // Add visibility filtering
-    // For community posts page, allow both public and community posts
-    // Only filter out private posts for non-members
-    if (userId) {
-      // Authenticated user - check if member
-      const isMember = await this.isCommunityMember(userId, communityId);
-      if (!isMember) {
-        // Non-member can see public and community posts, but not private posts
-        baseConditions.push(or(eq(posts.visibility, 'public'), eq(posts.visibility, 'community')));
-      }
-      // Members can see all posts (no additional filter needed)
+    // Only filter by isPublished if it's specified, otherwise default to published posts
+    if (filters.isPublished !== undefined) {
+      allCountConditions.push(eq(posts.isPublished, filters.isPublished))
     } else {
-      // Unauthenticated user can see public and community posts, but not private posts
-      baseConditions.push(or(eq(posts.visibility, 'public'), eq(posts.visibility, 'community')));
+      allCountConditions.push(eq(posts.isPublished, true)) // Default to published posts
     }
 
-    query.where(and(...baseConditions))
+    // Apply the same visibility logic to count query
+    if (!isMember) {
+      allCountConditions.push(
+        or(eq(posts.visibility, "public"), eq(posts.visibility, "community"))
+      )
+    }
 
-    // Apply filters
+    // Apply same filters to count query
     if (filters.authorId) {
-      query.where(and(...baseConditions, eq(posts.authorId, filters.authorId)))
+      allCountConditions.push(eq(posts.authorId, filters.authorId))
     }
     if (filters.postType) {
-      query.where(
-        and(...baseConditions, eq(posts.postType, filters.postType as any))
-      )
+      allCountConditions.push(eq(posts.postType, filters.postType as any))
     }
     if (filters.isPinned !== undefined) {
-      query.where(and(...baseConditions, eq(posts.isPinned, filters.isPinned)))
+      allCountConditions.push(eq(posts.isPinned, filters.isPinned))
     }
     if (filters.isFeatured !== undefined) {
-      query.where(
-        and(...baseConditions, eq(posts.isFeatured, filters.isFeatured))
-      )
+      allCountConditions.push(eq(posts.isFeatured, filters.isFeatured))
     }
     if (filters.tags && filters.tags.length > 0) {
-      query.where(
-        and(
-          ...baseConditions,
-          or(...filters.tags.map((tag) => ilike(posts.tags, `%${tag}%`)))
-        )
+      allCountConditions.push(
+        or(...filters.tags.map((tag) => ilike(posts.tags, `%${tag}%`)))
       )
     }
     if (filters.createdAt) {
       if (filters.createdAt.start) {
-        query.where(
-          and(...baseConditions, gte(posts.createdAt, filters.createdAt.start))
-        )
+        allCountConditions.push(gte(posts.createdAt, filters.createdAt.start))
       }
       if (filters.createdAt.end) {
-        query.where(
-          and(...baseConditions, lte(posts.createdAt, filters.createdAt.end))
-        )
+        allCountConditions.push(lte(posts.createdAt, filters.createdAt.end))
       }
     }
-
-    // Apply search
     if (search) {
-      query.where(
-        and(
-          ...baseConditions,
-          or(
-            ilike(posts.title, `%${search}%`),
-            ilike(posts.content, `%${search}%`),
-            ilike(posts.excerpt, `%${search}%`)
-          )
+      allCountConditions.push(
+        or(
+          ilike(posts.title, `%${search}%`),
+          ilike(posts.content, `%${search}%`),
+          ilike(posts.excerpt, `%${search}%`)
         )
       )
     }
 
-    // Get total count - apply the same visibility filtering
-    const countBaseConditions = [
-      eq(posts.communityId, communityId),
-      eq(posts.isPublished, true),
-      isNull(posts.deletedAt),
-    ]
+    // Apply all conditions at once (filter out any null/undefined conditions)
+    const validCountConditions = allCountConditions.filter(
+      (cond) => cond != null
+    )
 
-    // Apply the same visibility logic to count query
-    if (userId) {
-      // Authenticated user - check if member
-      const isMember = await this.isCommunityMember(userId, communityId);
-      if (!isMember) {
-        // Non-member can see public and community posts, but not private posts
-        countBaseConditions.push(or(eq(posts.visibility, 'public'), eq(posts.visibility, 'community')));
-      }
-      // Members can see all posts (no additional filter needed)
-    } else {
-      // Unauthenticated user can see public and community posts, but not private posts
-      countBaseConditions.push(or(eq(posts.visibility, 'public'), eq(posts.visibility, 'community')));
-    }
-
+    // validCountConditions will always have at least communityId and deletedAt
     const countQuery = db
       .select({ count: count() })
       .from(posts)
-      .where(and(...countBaseConditions))
+      .where(and(...validCountConditions))
 
-    const dynamicCountQuery = countQuery.$dynamic()
-
-    // Apply same filters to count query
-    if (filters.authorId) {
-      dynamicCountQuery.where(
-        and(...baseConditions, eq(posts.authorId, filters.authorId))
-      )
-    }
-    if (filters.postType) {
-      dynamicCountQuery.where(
-        and(...baseConditions, eq(posts.postType, filters.postType as any))
-      )
-    }
-    if (filters.isPinned !== undefined) {
-      dynamicCountQuery.where(
-        and(...baseConditions, eq(posts.isPinned, filters.isPinned))
-      )
-    }
-    if (filters.isFeatured !== undefined) {
-      dynamicCountQuery.where(
-        and(...baseConditions, eq(posts.isFeatured, filters.isFeatured))
-      )
-    }
-
-    const [{ count: totalCount }] = await dynamicCountQuery
+    const countResult = await countQuery
+    const totalCount = countResult[0]?.count ?? 0
     const totalPages = Math.ceil(totalCount / pageSize)
 
-    // Apply sorting with priority to pinned/featured posts
-    let orderedQuery = query
-
-    // Always sort pinned posts first, then featured, then by specified sort
-    orderedQuery = orderedQuery.orderBy(
-      desc(posts.isPinned),
-      desc(posts.isFeatured),
-      ...sort.map((sortItem) => {
+    // Build sort order - always sort pinned posts first, then featured, then by specified sort
+    const sortOrderBy = sort
+      .map((sortItem) => {
+        if (!sortItem || !sortItem.field) {
+          return null
+        }
         switch (sortItem.field) {
           case "createdAt":
             return sortItem.order === "asc"
@@ -437,6 +489,10 @@ class PostService {
             return sortItem.order === "asc"
               ? asc(posts.updatedAt)
               : desc(posts.updatedAt)
+          case "publishedAt":
+            return sortItem.order === "asc"
+              ? asc(posts.publishedAt)
+              : desc(posts.publishedAt)
           case "title":
             return sortItem.order === "asc"
               ? asc(posts.title)
@@ -453,9 +509,13 @@ class PostService {
             return desc(posts.createdAt)
         }
       })
-    )
+      .filter((orderBy) => orderBy !== null)
 
-    const results = await orderedQuery.limit(pageSize).offset(offset)
+    // Apply sorting and pagination
+    const results = await query
+      .orderBy(desc(posts.isPinned), desc(posts.isFeatured), ...sortOrderBy)
+      .limit(pageSize)
+      .offset(offset)
 
     return {
       data: results,
@@ -526,7 +586,7 @@ class PostService {
     // - If no userId: only show public posts (public access)
     // - If userId provided: show all posts (for admin use)
     if (!userId) {
-      baseConditions.push(eq(posts.visibility, 'public'))
+      baseConditions.push(eq(posts.visibility, "public"))
     }
     // Note: When userId is provided, we don't filter by visibility
     // This allows admins to see all posts including drafts and community posts
@@ -553,7 +613,7 @@ class PostService {
 
     // Apply the same visibility logic to count query
     if (!userId) {
-      countBaseConditions.push(eq(posts.visibility, 'public'))
+      countBaseConditions.push(eq(posts.visibility, "public"))
     }
     // Note: When userId is provided, we don't filter by visibility for count query either
 
@@ -600,7 +660,11 @@ class PostService {
   }
 
   // Get single post by slug
-  static async getPostBySlug(slug: string, communityId?: string, userId?: string) {
+  static async getPostBySlug(
+    slug: string,
+    communityId?: string,
+    userId?: string
+  ) {
     const query = db
       .select({
         id: posts.id,
@@ -683,14 +747,14 @@ class PostService {
     const post = results[0]
 
     // Check visibility access control
-    if (post.visibility === 'community') {
+    if (post.visibility === "community") {
       if (!userId) {
-        throw new Error('Authentication required for community posts')
+        throw new Error("Authentication required for community posts")
       }
 
       const isMember = await this.isCommunityMember(userId, post.communityId)
       if (!isMember) {
-        throw new Error('Access denied - community membership required')
+        throw new Error("Access denied - community membership required")
       }
     }
     // Public posts are accessible to everyone
@@ -765,14 +829,14 @@ class PostService {
     }
 
     // Check visibility access control
-    if (post.visibility === 'community') {
+    if (post.visibility === "community") {
       if (!userId) {
-        throw new Error('Authentication required for community posts')
+        throw new Error("Authentication required for community posts")
       }
 
       const isMember = await this.isCommunityMember(userId, post.communityId)
       if (!isMember) {
-        throw new Error('Access denied - community membership required')
+        throw new Error("Access denied - community membership required")
       }
     }
     // Public posts are accessible to everyone
@@ -808,7 +872,7 @@ class PostService {
       slug: data.slug,
       updatedAt: new Date(),
     }
-    
+
     if (data.visibility !== undefined) {
       updateData.visibility = data.visibility
     }

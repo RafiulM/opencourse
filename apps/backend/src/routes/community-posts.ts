@@ -1,14 +1,18 @@
-import { Router, Request, Response } from 'express';
-import { PostService } from '../services/posts';
-import { AppError, formatErrorResponse, handleDatabaseError } from '../lib/errors';
+import { Router, Request, Response } from "express"
+import { PostService } from "../services/posts"
+import {
+  AppError,
+  formatErrorResponse,
+  handleDatabaseError,
+} from "../lib/errors"
 import {
   validateCreatePostData,
   validatePaginationParams,
-  validatePostQueryOptions
-} from '../lib/validation';
-import { authenticate, optionalAuth } from '../middleware/auth';
+  validatePostQueryOptions,
+} from "../lib/validation"
+import { authenticate, optionalAuth } from "../middleware/auth"
 
-const router: Router = Router();
+const router: Router = Router()
 
 // Community-specific Post Routes
 
@@ -86,35 +90,39 @@ const router: Router = Router();
  *       500:
  *         description: Internal server error
  */
-router.post('/:communityId/posts', authenticate, async (req, res) => {
+router.post("/:communityId/posts", authenticate, async (req, res) => {
   try {
-    const { communityId } = req.params;
+    const { communityId } = req.params
     const postData = {
       ...req.body,
-      communityId // Ensure communityId from path is used
-    };
+      communityId, // Ensure communityId from path is used
+    }
 
     // Validate the post data (slug is now optional)
-    validateCreatePostData(postData);
+    validateCreatePostData(postData)
 
     // Create post - slug will be auto-generated from title if not provided
-    const post = await PostService.createPost(req.user!.id, communityId, postData);
+    const post = await PostService.createPost(
+      req.user!.id,
+      communityId,
+      postData
+    )
     res.status(201).json({
       success: true,
       data: post,
-      message: 'Post created successfully'
-    });
+      message: "Post created successfully",
+    })
   } catch (error) {
     if (error instanceof AppError) {
-      const errorResponse = formatErrorResponse(error);
-      return res.status(error.statusCode).json(errorResponse);
+      const errorResponse = formatErrorResponse(error)
+      return res.status(error.statusCode).json(errorResponse)
     }
 
-    const dbError = handleDatabaseError(error);
-    const errorResponse = formatErrorResponse(dbError);
-    res.status(dbError.statusCode).json(errorResponse);
+    const dbError = handleDatabaseError(error)
+    const errorResponse = formatErrorResponse(dbError)
+    res.status(dbError.statusCode).json(errorResponse)
   }
-});
+})
 
 /**
  * @swagger
@@ -186,11 +194,11 @@ router.post('/:communityId/posts', authenticate, async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.get('/:communityId/posts', optionalAuth, async (req, res) => {
+router.get("/:communityId/posts", optionalAuth, async (req, res) => {
   try {
-    const { communityId } = req.params;
-    validatePaginationParams(req.query);
-    validatePostQueryOptions(req.query);
+    const { communityId } = req.params
+    validatePaginationParams(req.query)
+    validatePostQueryOptions(req.query)
 
     const options = {
       page: parseInt(req.query.page as string) || 1,
@@ -199,20 +207,43 @@ router.get('/:communityId/posts', optionalAuth, async (req, res) => {
         communityId,
         authorId: req.query.authorId as string,
         postType: req.query.postType as string,
-        isPinned: req.query.isPinned === 'true' ? true : req.query.isPinned === 'false' ? false : undefined,
-        isFeatured: req.query.isFeatured === 'true' ? true : req.query.isFeatured === 'false' ? false : undefined,
-        tags: req.query.tags ? (req.query.tags as string).split(',').map(t => t.trim()) : undefined,
+        isPublished:
+          req.query.isPublished === "true"
+            ? true
+            : req.query.isPublished === "false"
+              ? false
+              : undefined,
+        isPinned:
+          req.query.isPinned === "true"
+            ? true
+            : req.query.isPinned === "false"
+              ? false
+              : undefined,
+        isFeatured:
+          req.query.isFeatured === "true"
+            ? true
+            : req.query.isFeatured === "false"
+              ? false
+              : undefined,
+        tags: req.query.tags
+          ? (req.query.tags as string).split(",").map((t) => t.trim())
+          : undefined,
       },
       search: req.query.search as string,
-      sort: req.query.sort ?
-        (req.query.sort as string).split(',').map((s: string) => {
-          const [field, order] = s.split(':');
-          return { field, order: order as 'asc' | 'desc' };
-        }) :
-        [{ field: 'createdAt', order: 'desc' as const }]
-    };
+      sort: req.query.sort
+        ? (req.query.sort as string).split(",").map((s: string) => {
+            const [field, order] = s.split(":")
+            return { field, order: (order || "desc") as "asc" | "desc" }
+          })
+        : [{ field: "createdAt", order: "desc" as const }],
+    }
 
-    const result = await PostService.getCommunityPosts(communityId, options, req.user?.id);
+    const result = await PostService.getCommunityPosts(
+      communityId,
+      options,
+      req.user?.id
+    )
+
     res.json({
       success: true,
       data: result.data,
@@ -220,19 +251,19 @@ router.get('/:communityId/posts', optionalAuth, async (req, res) => {
       totalPages: result.totalPages,
       currentPage: result.currentPage,
       pageSize: result.pageSize,
-      message: 'Community posts retrieved successfully'
-    });
+      message: "Community posts retrieved successfully",
+    })
   } catch (error) {
     if (error instanceof AppError) {
-      const errorResponse = formatErrorResponse(error);
-      return res.status(error.statusCode).json(errorResponse);
+      const errorResponse = formatErrorResponse(error)
+      return res.status(error.statusCode).json(errorResponse)
     }
 
-    const dbError = handleDatabaseError(error);
-    const errorResponse = formatErrorResponse(dbError);
-    res.status(dbError.statusCode).json(errorResponse);
+    const dbError = handleDatabaseError(error)
+    const errorResponse = formatErrorResponse(dbError)
+    res.status(dbError.statusCode).json(errorResponse)
   }
-});
+})
 
 /**
  * @swagger
@@ -267,10 +298,10 @@ router.get('/:communityId/posts', optionalAuth, async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.get('/:communityId/posts/featured', optionalAuth, async (req, res) => {
+router.get("/:communityId/posts/featured", optionalAuth, async (req, res) => {
   try {
-    const { communityId } = req.params;
-    validatePaginationParams(req.query);
+    const { communityId } = req.params
+    validatePaginationParams(req.query)
 
     const options = {
       page: parseInt(req.query.page as string) || 1,
@@ -278,12 +309,16 @@ router.get('/:communityId/posts/featured', optionalAuth, async (req, res) => {
       filters: {
         communityId,
         isFeatured: true,
-        isPublished: true
+        isPublished: true,
       },
-      sort: [{ field: 'createdAt', order: 'desc' as const }]
-    };
+      sort: [{ field: "createdAt", order: "desc" as const }],
+    }
 
-    const result = await PostService.getCommunityPosts(communityId, options, req.user?.id);
+    const result = await PostService.getCommunityPosts(
+      communityId,
+      options,
+      req.user?.id
+    )
     res.json({
       success: true,
       data: result.data,
@@ -291,19 +326,19 @@ router.get('/:communityId/posts/featured', optionalAuth, async (req, res) => {
       totalPages: result.totalPages,
       currentPage: result.currentPage,
       pageSize: result.pageSize,
-      message: 'Featured posts retrieved successfully'
-    });
+      message: "Featured posts retrieved successfully",
+    })
   } catch (error) {
     if (error instanceof AppError) {
-      const errorResponse = formatErrorResponse(error);
-      return res.status(error.statusCode).json(errorResponse);
+      const errorResponse = formatErrorResponse(error)
+      return res.status(error.statusCode).json(errorResponse)
     }
 
-    const dbError = handleDatabaseError(error);
-    const errorResponse = formatErrorResponse(dbError);
-    res.status(dbError.statusCode).json(errorResponse);
+    const dbError = handleDatabaseError(error)
+    const errorResponse = formatErrorResponse(dbError)
+    res.status(dbError.statusCode).json(errorResponse)
   }
-});
+})
 
 /**
  * @swagger
@@ -338,10 +373,10 @@ router.get('/:communityId/posts/featured', optionalAuth, async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.get('/:communityId/posts/pinned', optionalAuth, async (req, res) => {
+router.get("/:communityId/posts/pinned", optionalAuth, async (req, res) => {
   try {
-    const { communityId } = req.params;
-    validatePaginationParams(req.query);
+    const { communityId } = req.params
+    validatePaginationParams(req.query)
 
     const options = {
       page: parseInt(req.query.page as string) || 1,
@@ -349,12 +384,16 @@ router.get('/:communityId/posts/pinned', optionalAuth, async (req, res) => {
       filters: {
         communityId,
         isPinned: true,
-        isPublished: true
+        isPublished: true,
       },
-      sort: [{ field: 'createdAt', order: 'desc' as const }]
-    };
+      sort: [{ field: "createdAt", order: "desc" as const }],
+    }
 
-    const result = await PostService.getCommunityPosts(communityId, options, req.user?.id);
+    const result = await PostService.getCommunityPosts(
+      communityId,
+      options,
+      req.user?.id
+    )
     res.json({
       success: true,
       data: result.data,
@@ -362,19 +401,19 @@ router.get('/:communityId/posts/pinned', optionalAuth, async (req, res) => {
       totalPages: result.totalPages,
       currentPage: result.currentPage,
       pageSize: result.pageSize,
-      message: 'Pinned posts retrieved successfully'
-    });
+      message: "Pinned posts retrieved successfully",
+    })
   } catch (error) {
     if (error instanceof AppError) {
-      const errorResponse = formatErrorResponse(error);
-      return res.status(error.statusCode).json(errorResponse);
+      const errorResponse = formatErrorResponse(error)
+      return res.status(error.statusCode).json(errorResponse)
     }
 
-    const dbError = handleDatabaseError(error);
-    const errorResponse = formatErrorResponse(dbError);
-    res.status(dbError.statusCode).json(errorResponse);
+    const dbError = handleDatabaseError(error)
+    const errorResponse = formatErrorResponse(dbError)
+    res.status(dbError.statusCode).json(errorResponse)
   }
-});
+})
 
 /**
  * @swagger
@@ -409,42 +448,50 @@ router.get('/:communityId/posts/pinned', optionalAuth, async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.get('/:communityId/posts/announcements', optionalAuth, async (req, res) => {
-  try {
-    const { communityId } = req.params;
-    validatePaginationParams(req.query);
+router.get(
+  "/:communityId/posts/announcements",
+  optionalAuth,
+  async (req, res) => {
+    try {
+      const { communityId } = req.params
+      validatePaginationParams(req.query)
 
-    const options = {
-      page: parseInt(req.query.page as string) || 1,
-      pageSize: parseInt(req.query.pageSize as string) || 10,
-      filters: {
+      const options = {
+        page: parseInt(req.query.page as string) || 1,
+        pageSize: parseInt(req.query.pageSize as string) || 10,
+        filters: {
+          communityId,
+          postType: "announcement",
+          isPublished: true,
+        },
+        sort: [{ field: "createdAt", order: "desc" as const }],
+      }
+
+      const result = await PostService.getCommunityPosts(
         communityId,
-        postType: 'announcement',
-        isPublished: true
-      },
-      sort: [{ field: 'createdAt', order: 'desc' as const }]
-    };
+        options,
+        req.user?.id
+      )
+      res.json({
+        success: true,
+        data: result.data,
+        totalCount: result.totalCount,
+        totalPages: result.totalPages,
+        currentPage: result.currentPage,
+        pageSize: result.pageSize,
+        message: "Announcements retrieved successfully",
+      })
+    } catch (error) {
+      if (error instanceof AppError) {
+        const errorResponse = formatErrorResponse(error)
+        return res.status(error.statusCode).json(errorResponse)
+      }
 
-    const result = await PostService.getCommunityPosts(communityId, options, req.user?.id);
-    res.json({
-      success: true,
-      data: result.data,
-      totalCount: result.totalCount,
-      totalPages: result.totalPages,
-      currentPage: result.currentPage,
-      pageSize: result.pageSize,
-      message: 'Announcements retrieved successfully'
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      const errorResponse = formatErrorResponse(error);
-      return res.status(error.statusCode).json(errorResponse);
+      const dbError = handleDatabaseError(error)
+      const errorResponse = formatErrorResponse(dbError)
+      res.status(dbError.statusCode).json(errorResponse)
     }
-
-    const dbError = handleDatabaseError(error);
-    const errorResponse = formatErrorResponse(dbError);
-    res.status(dbError.statusCode).json(errorResponse);
   }
-});
+)
 
-export default router;
+export default router

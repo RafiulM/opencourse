@@ -2,14 +2,15 @@ import { Metadata } from "next"
 import { CommunityPostsPageClient } from "./community-posts-page-client"
 
 interface CommunityPostsPageProps {
-  params: {
+  params: Promise<{
     slug: string
-  }
+  }>
 }
 
 export async function generateMetadata({ params }: CommunityPostsPageProps): Promise<Metadata> {
   try {
-    const encodedSlug = encodeURIComponent(params.slug)
+    const { slug } = await params
+    const encodedSlug = encodeURIComponent(slug)
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/communities/slug/${encodedSlug}`, {
       cache: 'no-store',
     })
@@ -50,6 +51,7 @@ export async function generateMetadata({ params }: CommunityPostsPageProps): Pro
   }
 }
 
-export default function CommunityPostsPage({ params }: CommunityPostsPageProps) {
-  return <CommunityPostsPageClient communitySlug={params.slug} />
+export default async function CommunityPostsPage({ params }: CommunityPostsPageProps) {
+  const { slug } = await params
+  return <CommunityPostsPageClient communitySlug={slug} />
 }

@@ -2,26 +2,29 @@ import { Metadata } from "next"
 import { PostDetailPageClient } from "./post-detail-page-client"
 
 interface PostDetailPageProps {
-  params: {
+  params: Promise<{
     slug: string
     postSlug: string
-  }
+  }>
 }
 
-export async function generateMetadata({ params }: PostDetailPageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PostDetailPageProps): Promise<Metadata> {
   try {
-    const encodedCommunitySlug = encodeURIComponent(params.slug)
-    const encodedPostSlug = encodeURIComponent(params.postSlug)
+    const { slug, postSlug } = await params
+    const encodedCommunitySlug = encodeURIComponent(slug)
+    const encodedPostSlug = encodeURIComponent(postSlug)
 
     const communityResponse = await fetch(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/communities/slug/${encodedCommunitySlug}`,
-      { cache: 'no-store' }
+      { cache: "no-store" }
     )
 
     if (!communityResponse.ok) {
       return {
-        title: 'Community Post',
-        description: 'Read this community post and join the discussion.',
+        title: "Community Post",
+        description: "Read this community post and join the discussion.",
       }
     }
 
@@ -30,13 +33,33 @@ export async function generateMetadata({ params }: PostDetailPageProps): Promise
 
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/posts/slug/${encodedPostSlug}?communityId=${community.id}`,
-      { cache: 'no-store' }
+      { cache: "no-store" }
     )
 
     if (!response.ok) {
+      // Check if it's an authentication error - don't retry, return generic metadata
+      if (response.status === 500) {
+        try {
+          const errorText = await response.text()
+          const errorData = JSON.parse(errorText)
+          if (
+            errorData?.error?.details?.originalError ===
+            "Authentication required for community posts"
+          ) {
+            // Return generic metadata - the client component will handle redirect
+            return {
+              title: `${community.name} - Community Post`,
+              description: `Join ${community.name} to view this post.`,
+            }
+          }
+        } catch {
+          // Not JSON or parse error, fall through to generic error
+        }
+      }
+
       return {
-        title: 'Post Not Found',
-        description: 'The requested post could not be found.',
+        title: "Post Not Found",
+        description: "The requested post could not be found.",
       }
     }
 
@@ -44,45 +67,55 @@ export async function generateMetadata({ params }: PostDetailPageProps): Promise
     const post = postData.data
 
     // Create description from excerpt or truncated content
-    const description = post.excerpt ||
-      post.content?.replace(/[#*`\[\]()]/g, '').slice(0, 160) + '...' ||
-      `Read ${post.title} by ${post.author?.name || 'Anonymous'}`
+    const description =
+      post.excerpt ||
+      post.content?.replace(/[#*`\[\]()]/g, "").slice(0, 160) + "..." ||
+      `Read ${post.title} by ${post.author?.name || "Anonymous"}`
 
     return {
-      title: `${post.title} - ${post.community?.name || 'Community Post'}`,
+      title: `${post.title} - ${post.community?.name || "Community Post"}`,
       description,
-      keywords: post.tags?.join(', ') || 'community post, blog, discussion',
+      keywords: post.tags?.join(", ") || "community post, blog, discussion",
       authors: post.author?.name ? [{ name: post.author.name }] : [],
       openGraph: {
         title: post.title,
         description,
-        type: 'article',
+        type: "article",
         publishedTime: post.publishedAt || post.createdAt,
         authors: post.author?.name ? [post.author.name] : [],
-      siteName: post.community?.name || 'OpenCourse Community',
-        images: post.attachments?.filter(a => a.type === 'image').map(a => ({
-          url: a.upload?.url || '',
-          width: 1200,
-          height: 630,
-          alt: post.title,
-        })) || [],
+        siteName: post.community?.name || "OpenCourse Community",
+        images:
+          post.attachments
+            ?.filter((a) => a.type === "image")
+            .map((a) => ({
+              url: a.upload?.url || "",
+              width: 1200,
+              height: 630,
+              alt: post.title,
+            })) || [],
       },
       twitter: {
-        card: 'summary_large_image',
+        card: "summary_large_image",
         title: post.title,
         description,
-        creator: post.author?.name ? `@${post.author.name.replace(/\s+/g, '')}` : undefined,
-        images: post.attachments?.filter(a => a.type === 'image').map(a => a.upload?.url || '') || [],
+        creator: post.author?.name
+          ? `@${post.author.name.replace(/\s+/g, "")}`
+          : undefined,
+        images:
+          post.attachments
+            ?.filter((a) => a.type === "image")
+            .map((a) => a.upload?.url || "") || [],
       },
     }
   } catch (error) {
     return {
-      title: 'Community Post',
-      description: 'Read this community post and join the discussion.',
+      title: "Community Post",
+      description: "Read this community post and join the discussion.",
     }
   }
 }
 
-export default function PostDetailPage({ params }: PostDetailPageProps) {
-  return <PostDetailPageClient communitySlug={params.slug} postSlug={params.postSlug} />
+export default async function PostDetailPage({ params }: PostDetailPageProps) {
+  const { slug, postSlug } = await params
+  return <PostDetailPageClient communitySlug={slug} postSlug={postSlug} />
 }

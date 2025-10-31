@@ -1,9 +1,10 @@
 "use client"
 
 import type { ElementType } from "react"
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { ArrowLeft, ArrowRight, BookOpen, FileText, Lock } from "lucide-react"
 
 import { Navbar } from "@/components/navbar"
@@ -25,6 +26,7 @@ import { useCourses } from "@/hooks/use-courses"
 import { useCommunityPosts } from "@/hooks/use-posts"
 import { CommunityHeader } from "./community-header"
 import { AutoJoinHandler } from "@/components/community/auto-join-handler"
+import { JoinPromptOverlay } from "@/components/community/join-prompt-overlay"
 
 interface CommunityPageClientProps {
   communitySlug: string
@@ -34,6 +36,8 @@ export function CommunityPageClient({
   communitySlug,
 }: CommunityPageClientProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const [showJoinPrompt, setShowJoinPrompt] = useState(false)
 
   const {
     data: communityData,
@@ -101,6 +105,13 @@ export function CommunityPageClient({
 
   const isCommunityLoading =
     communityLoading || (communityError ? previewLoading : false)
+
+  // Handle join request from URL parameters
+  useEffect(() => {
+    if (searchParams?.get('request') === 'join' && community) {
+      setShowJoinPrompt(true)
+    }
+  }, [searchParams, community])
 
   if (isCommunityLoading) {
     return (
@@ -295,6 +306,17 @@ export function CommunityPageClient({
           )}
         </div>
       </main>
+
+      {/* Join Prompt Overlay */}
+      {community && (
+        <JoinPromptOverlay
+          communityId={community.id}
+          communityName={community.name}
+          communitySlug={community.slug || communitySlug}
+          isOpen={showJoinPrompt}
+          onClose={() => setShowJoinPrompt(false)}
+        />
+      )}
     </div>
   )
 }

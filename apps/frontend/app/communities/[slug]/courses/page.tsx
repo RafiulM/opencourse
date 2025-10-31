@@ -2,14 +2,15 @@ import { Metadata } from "next"
 import { CommunityCoursesPageClient } from "./community-courses-page-client"
 
 interface CommunityCoursesPageProps {
-  params: {
+  params: Promise<{
     slug: string
-  }
+  }>
 }
 
 export async function generateMetadata({ params }: CommunityCoursesPageProps): Promise<Metadata> {
   try {
-    const encodedSlug = encodeURIComponent(params.slug)
+    const { slug } = await params
+    const encodedSlug = encodeURIComponent(slug)
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/communities/slug/${encodedSlug}`,
       {
@@ -53,6 +54,7 @@ export async function generateMetadata({ params }: CommunityCoursesPageProps): P
   }
 }
 
-export default function CommunityCoursesPage({ params }: CommunityCoursesPageProps) {
-  return <CommunityCoursesPageClient communitySlug={params.slug} />
+export default async function CommunityCoursesPage({ params }: CommunityCoursesPageProps) {
+  const { slug } = await params
+  return <CommunityCoursesPageClient communitySlug={slug} />
 }
