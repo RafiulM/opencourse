@@ -1,0 +1,1 @@
+ALTER TABLE "user" ALTER COLUMN "username" SET DEFAULT substring(replace(gen_random_uuid()::text, '-', ''), 1, 12);

@@ -2,6 +2,30 @@ import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
+// Define the type for the session data returned by better-auth
+interface AuthSession {
+  user: {
+    id: string
+    email: string
+    emailVerified: boolean
+    name: string
+    image?: string
+    role: string
+    createdAt: Date
+    updatedAt: Date
+  }
+  session: {
+    id: string
+    expiresAt: Date
+    token: string
+    createdAt: Date
+    updatedAt: Date
+    ipAddress?: string
+    userAgent?: string
+    userId: string
+  }
+}
+
 /**
  * Server-side authentication check for protected routes
  * Returns the session if authenticated, redirects to login if not
@@ -29,7 +53,8 @@ export async function requireAuth() {
     redirect(loginUrl)
   }
 
-  return session
+  // Type cast the session data to our AuthSession interface
+  return session.data as AuthSession
 }
 
 /**
@@ -43,7 +68,8 @@ export async function getCurrentSession() {
     },
   })
 
-  return session.data ? session : null
+  // Type cast the session data to our AuthSession interface
+  return session.data ? (session.data as AuthSession) : null
 }
 
 /**
