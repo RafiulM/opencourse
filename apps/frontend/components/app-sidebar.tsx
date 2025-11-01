@@ -147,8 +147,13 @@ const data = {
 function SidebarThemeToggle() {
   const { isMobile } = useSidebar()
   const { theme, resolvedTheme, setTheme } = useTheme()
+  const [mounted, setMounted] = React.useState(false)
 
-  const activeTheme = theme ?? resolvedTheme ?? "system"
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const activeTheme = mounted ? (theme ?? resolvedTheme ?? "system") : "system"
 
   const ActiveIcon = React.useMemo(() => {
     if (activeTheme === "light") return IconSun
@@ -157,11 +162,12 @@ function SidebarThemeToggle() {
   }, [activeTheme])
 
   const subtitle = React.useMemo(() => {
+    if (!mounted) return "System"
     if (activeTheme === "system") {
       return `System (${resolvedTheme ?? "light"})`
     }
     return activeTheme === "dark" ? "Dark mode" : "Light mode"
-  }, [activeTheme, resolvedTheme])
+  }, [activeTheme, resolvedTheme, mounted])
 
   return (
     <SidebarMenu>

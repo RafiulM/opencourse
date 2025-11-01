@@ -43,10 +43,12 @@ export default function AdminDashboardClient() {
 
   // Calculate total students from communities
   const totalStudents =
-    communitiesData?.data?.reduce(
-      (sum, community) => sum + (community.memberCount || 0),
-      0
-    ) || 0
+    communitiesData?.data && Array.isArray(communitiesData.data)
+      ? communitiesData.data.reduce(
+          (sum, community) => sum + (community.memberCount || 0),
+          0
+        )
+      : 0
 
   // Calculate total content items
   const totalQuizzes = quizzesData?.data?.length || 0
@@ -55,16 +57,19 @@ export default function AdminDashboardClient() {
   // Real data for posts and comments
   const totalPosts = postsData?.totalCount || 0
   const totalComments =
-    postsData?.data?.reduce(
-      (sum, post) => sum + (post.commentsCount || 0),
-      0
-    ) || 0
+    postsData?.data && Array.isArray(postsData.data)
+      ? postsData.data.reduce((sum, post) => sum + (post.commentsCount || 0), 0)
+      : 0
 
   // Calculate published and draft posts from real data
   const publishedPosts =
-    postsData?.data?.filter((post) => post.isPublished)?.length || 0
+    postsData?.data && Array.isArray(postsData.data)
+      ? postsData.data.filter((post) => post.isPublished)?.length || 0
+      : 0
   const draftPosts =
-    postsData?.data?.filter((post) => !post.isPublished)?.length || 0
+    postsData?.data && Array.isArray(postsData.data)
+      ? postsData.data.filter((post) => !post.isPublished)?.length || 0
+      : 0
 
   // Note: reported comments, approved/pending/rejected comments would need a separate API endpoint
   // For now, we'll show only total comments which we have real data for
@@ -192,17 +197,19 @@ export default function AdminDashboardClient() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {communitiesData?.data?.slice(0, 3).map((community) => (
-                <div
-                  key={community.id}
-                  className="flex items-center justify-between"
-                >
-                  <span className="text-sm">{community.name}</span>
-                  <Badge variant="outline">
-                    {community.memberCount} members
-                  </Badge>
-                </div>
-              ))}
+              {communitiesData?.data && Array.isArray(communitiesData.data)
+                ? communitiesData.data.slice(0, 3).map((community) => (
+                    <div
+                      key={community.id}
+                      className="flex items-center justify-between"
+                    >
+                      <span className="text-sm">{community.name}</span>
+                      <Badge variant="outline">
+                        {community.memberCount} members
+                      </Badge>
+                    </div>
+                  ))
+                : null}
             </div>
           </CardContent>
         </Card>
@@ -221,17 +228,21 @@ export default function AdminDashboardClient() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {coursesData?.data?.slice(0, 3).map((course) => (
-                <div
-                  key={course.id}
-                  className="flex items-center justify-between"
-                >
-                  <span className="text-sm">{course.title}</span>
-                  <Badge variant={course.isPublished ? "default" : "secondary"}>
-                    {course.isPublished ? "Published" : "Draft"}
-                  </Badge>
-                </div>
-              ))}
+              {coursesData?.data && Array.isArray(coursesData.data)
+                ? coursesData.data.slice(0, 3).map((course) => (
+                    <div
+                      key={course.id}
+                      className="flex items-center justify-between"
+                    >
+                      <span className="text-sm">{course.title}</span>
+                      <Badge
+                        variant={course.isPublished ? "default" : "secondary"}
+                      >
+                        {course.isPublished ? "Published" : "Draft"}
+                      </Badge>
+                    </div>
+                  ))
+                : null}
             </div>
           </CardContent>
         </Card>
