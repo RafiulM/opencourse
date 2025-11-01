@@ -57,7 +57,7 @@ export default function EditPostPageClient({ id }: EditPostPageClientProps) {
       setFormData({
         id: post.id,
         title: post.title,
-        content: post.content,
+        content: post.content || "",
         excerpt: post.excerpt || "",
         postType: post.postType,
         tags: post.tags || [],
@@ -71,7 +71,9 @@ export default function EditPostPageClient({ id }: EditPostPageClientProps) {
 
   // Auto-save functionality
   const { triggerAutoSave, cancelAutoSave } = useAutoSave(
-    autoSaveMutation.mutateAsync,
+    async (data: UpdatePostRequest) => {
+      await autoSaveMutation.mutateAsync(data);
+    },
     {
       debounceMs: 1000,
       onSave: () => setAutoSaveStatus('saving'),

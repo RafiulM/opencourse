@@ -309,7 +309,7 @@ export function CommunityExplorer({
 
       {/* Loading Skeleton for Community Cards */}
       {isLoading && (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {Array.from({ length: pageSize / 2 }).map((_, i) => (
             <div
               key={i}
@@ -326,7 +326,7 @@ export function CommunityExplorer({
         <div
           className={
             viewMode === "grid"
-              ? "grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+              ? "grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
               : "space-y-4"
           }
         >

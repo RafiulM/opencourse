@@ -22,8 +22,7 @@ export const uploadValidation: Record<UploadType, FileValidationRules> = {
   },
   community_banner: {
     maxSize: 5 * 1024 * 1024, // 5MB
-    allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
-    maxDimensions: { width: 1920, height: 600 }
+    allowedTypes: ['image/jpeg', 'image/png', 'image/webp']
   },
   course_thumbnail: {
     maxSize: 3 * 1024 * 1024, // 3MB

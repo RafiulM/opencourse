@@ -1,5 +1,5 @@
 import { getCurrentSession } from '@/lib/auth-server'
-import { handleLoginRedirect } from '@/lib/auth-server'
+import { redirect } from 'next/navigation'
 import LoginPageClient from './login-client'
 
 export default async function LoginPage(props: {
@@ -11,7 +11,14 @@ export default async function LoginPage(props: {
   // If user is already authenticated, handle redirect to previous page
   if (session) {
     const searchParams = await props.searchParams
-    return handleLoginRedirect(searchParams?.returnUrl)
+    const returnUrl = searchParams?.returnUrl
+
+    // Handle redirect directly in the component
+    if (returnUrl) {
+      redirect(returnUrl)
+    } else {
+      redirect("/")
+    }
   }
 
   // Otherwise show the login form

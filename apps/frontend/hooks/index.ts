@@ -7,4 +7,5 @@ export * from './use-materials';
 export * from './use-quizzes';
 export * from './use-posts';
 export * from './use-comments';
+export * from './use-users';
 export * from './useAutoSave';

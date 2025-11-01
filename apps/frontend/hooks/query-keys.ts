@@ -96,4 +96,9 @@ export const queryKeys = {
     details: () => [...queryKeys.comments.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.comments.details(), id] as const,
   },
+  users: {
+    all: ['users'] as const,
+    details: () => [...queryKeys.users.all, 'detail'] as const,
+    profile: () => [...queryKeys.users.details(), 'profile'] as const,
+  },
 };

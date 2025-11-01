@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { formatDistanceToNow } from "date-fns"
-import { Heart, MessageCircle, Eye, Calendar, User } from "lucide-react"
+import { Calendar, User } from "lucide-react"
 import { Post } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { PostVisibilityBadge } from "./access-control"
@@ -127,21 +127,7 @@ export function PostCard({ post, className }: PostCardProps) {
             </div>
           )}
 
-          <div className="text-muted-foreground flex items-center gap-4 text-xs">
-            <div className="flex items-center gap-1">
-              <Eye className="h-3 w-3" />
-              <span>{post.viewsCount || 0}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Heart className="h-3 w-3" />
-              <span>{post.likesCount || 0}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <MessageCircle className="h-3 w-3" />
-              <span>{post.commentsCount || 0}</span>
-            </div>
-          </div>
-        </CardContent>
+          </CardContent>
       </Card>
     </Link>
   )

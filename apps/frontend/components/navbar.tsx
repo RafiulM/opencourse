@@ -22,6 +22,7 @@ import {
   Moon,
   Sun,
   Monitor,
+  Settings,
 } from "lucide-react"
 import { useCommunities } from "@/hooks/use-communities"
 import { useTheme } from "next-themes"
@@ -168,6 +169,13 @@ export function Navbar() {
                         System
                       </DropdownMenuRadioItem>
                     </DropdownMenuRadioGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/settings" className="flex items-center gap-2">
+                        <Settings className="h-4 w-4" />
+                        Settings
+                      </Link>
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="text-destructive hover:text-destructive flex items-center gap-2"

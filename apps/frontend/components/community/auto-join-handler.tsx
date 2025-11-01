@@ -12,7 +12,7 @@ interface AutoJoinHandlerProps {
 }
 
 export function AutoJoinHandler({ communityId, communityName }: AutoJoinHandlerProps) {
-  const { data: session, isLoading: sessionLoading } = useSession()
+  const { data: session, isPending: sessionLoading } = useSession()
   const searchParams = useSearchParams()
   const joinCommunity = useJoinCommunity()
   const hasProcessed = useRef(false)

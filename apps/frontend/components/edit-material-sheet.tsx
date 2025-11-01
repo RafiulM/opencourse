@@ -25,9 +25,7 @@ import { Link as LinkIcon, FileText, Video } from "lucide-react";
 const updateMaterialSchema = z.object({
   title: z.string().min(1, "Title is required").max(200, "Title too long"),
   description: z.string().max(1000, "Description too long").optional(),
-  type: z.enum(["video", "text", "file", "link"], {
-    required_error: "Material type is required",
-  }),
+  type: z.enum(["video", "text", "file", "link"]),
   content: z.string().max(10000, "Content too long").optional(),
   url: z.string().url("Invalid URL").optional(),
   order: z.number().min(1, "Order must be at least 1"),

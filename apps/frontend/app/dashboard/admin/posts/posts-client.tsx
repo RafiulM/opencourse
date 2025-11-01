@@ -338,7 +338,7 @@ export default function PostsPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    posts.map((post) => (
+                    posts.map((post: any) => (
                       <TableRow key={post.id}>
                         <TableCell>
                           <div className="max-w-md">

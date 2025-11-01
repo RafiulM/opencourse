@@ -4,6 +4,7 @@ export interface User {
   id: string
   name: string
   email: string
+  username: string
   emailVerified: boolean
   image?: string
   createdAt: string
@@ -25,6 +26,13 @@ export interface Community {
   createdBy: string
   createdAt: string
   updatedAt: string
+  creator?: {
+    id: string
+    name: string
+    email: string
+    username: string
+    image?: string
+  }
 }
 
 export interface CommunityMember {
@@ -475,4 +483,14 @@ export interface CommentLikeResponse {
     likesCount: number
   }
   message: string
+}
+
+// User Profile Types
+export interface UpdateUserProfileRequest {
+  name?: string
+  image?: string
+}
+
+export interface UpdateAvatarRequest {
+  avatarUrl: string
 }

@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { FileUpload } from './file-upload';
-import { UploadService, UploadProgress, UploadType } from '@/lib/upload-service';
+import { UploadService } from '@/lib/upload-service'
+import { UploadType, UploadProgress } from '@/lib/upload-types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getAuthHeaders } from '@/lib/auth-utils';

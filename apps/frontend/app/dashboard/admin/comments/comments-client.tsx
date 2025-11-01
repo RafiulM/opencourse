@@ -285,7 +285,7 @@ export default function CommentsPage() {
                           <div className="max-w-xs">
                             <div className="text-sm font-medium line-clamp-1">{comment.postTitle}</div>
                             <Link
-                              href={`/communities/${comment.community?.slug ?? comment.community?.name?.toLowerCase().replace(/\s+/g, '-')}/posts/${comment.postSlug ?? comment.postId}`}
+                              href={`/communities/${comment.community?.name?.toLowerCase().replace(/\s+/g, '-')}/posts/${comment.postId}`}
                               target="_blank"
                               className="text-xs text-blue-600 hover:underline flex items-center"
                             >

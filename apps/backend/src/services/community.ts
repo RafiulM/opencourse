@@ -5,6 +5,7 @@ import {
   communityRoleEnum,
   communityPrivacyEnum,
 } from "../db/schema/community"
+import { user } from "../db/schema/auth"
 import {
   eq,
   and,
@@ -112,8 +113,16 @@ export class CommunityService {
           FROM ${communityMembers}
           WHERE ${communityMembers.communityId} = ${communities.id}
         )`}, 0)`,
+        creator: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          username: user.username,
+          image: user.image,
+        },
       })
       .from(communities)
+      .leftJoin(user, eq(communities.createdBy, user.id))
       .where(eq(communities.id, id))
       .limit(1)
 
@@ -156,8 +165,16 @@ export class CommunityService {
           FROM ${communityMembers}
           WHERE ${communityMembers.communityId} = ${communities.id}
         )`}, 0)`,
+        creator: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          username: user.username,
+          image: user.image,
+        },
       })
       .from(communities)
+      .leftJoin(user, eq(communities.createdBy, user.id))
       .where(eq(communities.slug, slug))
       .limit(1)
 

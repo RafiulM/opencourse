@@ -1,23 +1,17 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'storage.opencourse.id',
-        port: '',
-        pathname: '/public/**',
+        protocol: "https",
+        hostname: "storage.opencourse.id",
+        port: "",
+        pathname: "/public/**",
       },
     ],
   },
-  output: 'standalone',
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  output: "standalone",
   trailingSlash: false,
   skipTrailingSlashRedirect: true,
   // Force all pages to be dynamic to avoid static generation issues
@@ -26,6 +20,6 @@ const nextConfig: NextConfig = {
   experimental: {
     // No static generation
   },
-};
+}
 
-export default nextConfig;
+export default nextConfig

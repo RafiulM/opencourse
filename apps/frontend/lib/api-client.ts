@@ -36,6 +36,9 @@ import {
   PostLikeResponse,
   PostLikesResponse,
   CommentLikeResponse,
+  User,
+  UpdateUserProfileRequest,
+  UpdateAvatarRequest,
 } from "./types"
 import { isMembershipRequiredOriginalError } from "./membership-access"
 
@@ -989,6 +992,60 @@ export class ApiClient {
     return this.request<ApiResponse<Comment>>(`/comments/${commentId}/reply`, {
       method: "POST",
       body: JSON.stringify(data),
+    })
+  }
+
+  // User Profile API
+  async getUserProfile(): Promise<ApiResponse<User>> {
+    return this.request<ApiResponse<User>>("/users/profile")
+  }
+
+  async updateUserProfile(
+    data: UpdateUserProfileRequest
+  ): Promise<ApiResponse<User>> {
+    return this.request<ApiResponse<User>>("/users/profile", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateUserAvatar(
+    data: UpdateAvatarRequest
+  ): Promise<ApiResponse<User>> {
+    return this.request<ApiResponse<User>>("/users/avatar", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateUsername(username: string): Promise<ApiResponse<User>> {
+    return this.request<ApiResponse<User>>("/users/username", {
+      method: "PUT",
+      body: JSON.stringify({ username }),
+    })
+  }
+
+  async checkUsernameAvailability(username: string): Promise<ApiResponse<{ available: boolean; username: string }>> {
+    const params = new URLSearchParams({ username })
+    return this.request<ApiResponse<{ available: boolean; username: string }>>(
+      `/users/username/check-availability?${params}`
+    )
+  }
+
+  async validateUsername(username: string): Promise<ApiResponse<{
+    isValid: boolean;
+    isAvailable: boolean;
+    message: string;
+    username: string;
+  }>> {
+    return this.request<ApiResponse<{
+      isValid: boolean;
+      isAvailable: boolean;
+      message: string;
+      username: string;
+    }>>('/users/validate-username', {
+      method: 'POST',
+      body: JSON.stringify({ username }),
     })
   }
 }

@@ -23,7 +23,7 @@ export function useComments(postId: string, options: CommentQueryOptions = {}) {
 export function useComment(id: string, enabled = true) {
   return useQuery({
     queryKey: queryKeys.comments.detail(id),
-    queryFn: () => apiClient.getComment(id),
+    queryFn: () => apiClient.getComments(id),
     enabled: enabled && !!id,
   });
 }

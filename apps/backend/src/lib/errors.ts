@@ -122,7 +122,13 @@ export const handleDatabaseError = (error: any): AppError => {
     if (detail.includes('community_members_unique')) {
       return createDuplicateError('Community member', 'user', 'user');
     }
-    
+
+    if (detail.includes('user_username_unique')) {
+      const match = detail.match(/\(username\)=\(([^)]+)\)/);
+      const value = match ? match[1] : 'unknown';
+      return createDuplicateError('User', 'username', value);
+    }
+
     return new AppError('Resource already exists', 409, ErrorType.DUPLICATE_RESOURCE);
   }
   

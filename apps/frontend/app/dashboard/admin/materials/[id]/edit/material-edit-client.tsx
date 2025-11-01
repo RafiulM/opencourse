@@ -56,7 +56,7 @@ export default function EditMaterialPageClient({ id }: EditMaterialPageClientPro
   const handleSelectChange = (value: string) => {
     setFormData(prev => ({
       ...prev,
-      type: value
+      type: value as "link" | "video" | "text" | "file"
     }));
   };
 

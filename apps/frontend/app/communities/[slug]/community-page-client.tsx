@@ -157,27 +157,33 @@ export function CommunityPageClient({
 
   return (
     <div className="bg-background min-h-screen">
-      {/* Community Banner - thin, full width */}
+      <Navbar />
+
+      {/* Community Banner - thin, constrained width */}
       {community?.banner && (
-        <div className="relative h-16 w-full overflow-hidden">
-          <Image
-            src={community.banner}
-            alt={`${community.name} banner`}
-            fill
-            className="object-cover"
-            priority
-          />
-          {/* Overlay gradient for better text readability */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
+        <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
+          <div className="relative w-full overflow-hidden rounded-lg">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="relative h-1/2 w-full overflow-hidden rounded-lg">
+                <Image
+                  src={community.banner}
+                  alt={`${community.name} banner`}
+                  fill
+                  className="object-cover"
+                  priority
+                />
+                {/* Overlay gradient for better text readability */}
+                <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
+              </div>
+            </div>
+          </div>
         </div>
       )}
-
-      <Navbar />
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <CommunityHeader
           community={community}
-          showBanner={false} // Banner is now shown at the top of the page
+          showBanner={false} // Banner is now shown between navbar and community header
           showRequestToJoin={shouldRestrictContent}
           onRequestToJoin={
             shouldRestrictContent ? handleRequestToJoin : undefined

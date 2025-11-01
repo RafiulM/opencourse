@@ -38,7 +38,7 @@ export async function createExamplePost(communityId: string) {
   try {
     const response = await apiClient.createCommunityPost(communityId, postData);
     console.log('Post created successfully:', response.data);
-    return response.data;
+    true
   } catch (error) {
     console.error('Failed to create post:', error);
     throw error;
@@ -61,9 +61,9 @@ export async function getCommunityPostsExample(communityId: string) {
 
   try {
     const response = await apiClient.getCommunityPosts(communityId, options);
-    console.log('Community posts:', response.data.posts);
-    console.log('Pagination:', response.data.pagination);
-    return response.data;
+    console.log('Community posts:', response.data);
+    // console.log('Pagination:', response.data.pagination);
+    true
   } catch (error) {
     console.error('Failed to get community posts:', error);
     throw error;
@@ -74,8 +74,8 @@ export async function getCommunityPostsExample(communityId: string) {
 export async function getFeaturedPostsExample(communityId: string) {
   try {
     const response = await apiClient.getFeaturedCommunityPosts(communityId, 1, 5);
-    console.log('Featured posts:', response.data.posts);
-    return response.data;
+    console.log('Featured posts:', response.data);
+    true
   } catch (error) {
     console.error('Failed to get featured posts:', error);
     throw error;
@@ -87,7 +87,7 @@ export async function likePostExample(postId: string) {
   try {
     const response = await apiClient.toggleLikePost(postId);
     console.log('Post like status:', response.data);
-    return response.data;
+    true
   } catch (error) {
     console.error('Failed to like post:', error);
     throw error;
@@ -103,7 +103,7 @@ export async function createCommentExample(postId: string) {
   try {
     const response = await apiClient.createComment(postId, commentData);
     console.log('Comment created:', response.data);
-    return response.data;
+    true
   } catch (error) {
     console.error('Failed to create comment:', error);
     throw error;
@@ -154,7 +154,7 @@ export async function updatePostExample(postId: string) {
   try {
     const response = await apiClient.updatePost(updateData);
     console.log('Post updated:', response.data);
-    return response.data;
+    true
   } catch (error) {
     console.error('Failed to update post:', error);
     throw error;
@@ -167,7 +167,7 @@ export async function getPostLikesExample(postId: string) {
     const response = await apiClient.getPostLikes(postId, 1, 10);
     console.log('Post likes:', response.data.likes);
     console.log('Total likes:', response.data.totalCount);
-    return response.data;
+    true
   } catch (error) {
     console.error('Failed to get post likes:', error);
     throw error;
@@ -227,6 +227,9 @@ function CommunityPostsComponent({ communityId }: { communityId: string }) {
 // Export all example functions
 export {
   apiClient,
+};
+
+export type {
   CreatePostRequest,
   UpdatePostRequest,
   CreateCommentRequest,

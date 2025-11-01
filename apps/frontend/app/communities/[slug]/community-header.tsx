@@ -21,7 +21,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { AboutCommunityDialog } from "./about-dialog"
-import { useCommunityMembership, useJoinCommunity, useLeaveCommunity } from "@/hooks/use-communities"
+import {
+  useCommunityMembership,
+  useJoinCommunity,
+  useLeaveCommunity,
+} from "@/hooks/use-communities"
 import { useSession } from "@/lib/auth"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -51,13 +55,8 @@ export function CommunityHeader({
   const memberLabel = memberCount === 1 ? "member" : "members"
 
   // Check membership status
-  const {
-    data: membership,
-    isLoading: membershipLoading
-  } = useCommunityMembership(
-    community.id,
-    !!session && !sessionLoading
-  )
+  const { data: membership, isLoading: membershipLoading } =
+    useCommunityMembership(community.id, !!session && !sessionLoading)
 
   const joinCommunity = useJoinCommunity()
   const leaveCommunity = useLeaveCommunity()
@@ -69,7 +68,9 @@ export function CommunityHeader({
     if (!session) {
       // Redirect to login with return URL that includes join action
       const currentPath = window.location.pathname
-      const returnUrl = encodeURIComponent(`${currentPath}?join=true&communityId=${community.id}`)
+      const returnUrl = encodeURIComponent(
+        `${currentPath}?join=true&communityId=${community.id}`
+      )
       router.push(`/login?returnUrl=${returnUrl}`)
       return
     }
@@ -104,7 +105,7 @@ export function CommunityHeader({
         variant: "secondary" as const,
         onClick: handleLeaveClick,
         disabled: false,
-        showDropdown: true
+        showDropdown: true,
       }
     }
 
@@ -115,7 +116,7 @@ export function CommunityHeader({
           variant: "default" as const,
           onClick: handleJoinClick,
           disabled: false,
-          showDropdown: false
+          showDropdown: false,
         }
       case "private":
       case "invite_only":
@@ -124,7 +125,7 @@ export function CommunityHeader({
           variant: "outline" as const,
           onClick: handleJoinClick,
           disabled: false,
-          showDropdown: false
+          showDropdown: false,
         }
       default:
         return {
@@ -132,7 +133,7 @@ export function CommunityHeader({
           variant: "default" as const,
           onClick: handleJoinClick,
           disabled: false,
-          showDropdown: false
+          showDropdown: false,
         }
     }
   }
@@ -157,23 +158,23 @@ export function CommunityHeader({
 
       <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
         <div className="flex flex-1 items-start gap-5">
-          <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border bg-background">
+          <div className="bg-background flex h-24 w-24 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border">
             {community.avatar ? (
               <Image
                 src={community.avatar}
                 alt={`${community.name} avatar`}
-                width={80}
-                height={80}
+                width={96}
+                height={96}
                 className="h-full w-full object-cover"
               />
             ) : (
-              <Users className="h-10 w-10 text-primary" />
+              <Users className="text-primary h-12 w-12" />
             )}
           </div>
 
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-3xl font-bold tracking-tight text-foreground">
+              <h1 className="text-foreground text-3xl font-bold tracking-tight">
                 {community.name}
               </h1>
               <Badge variant="outline" className="capitalize">
@@ -182,11 +183,16 @@ export function CommunityHeader({
               {community.isVerified && <Badge>Verified</Badge>}
             </div>
 
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              <span className="text-xl text-foreground">
-                {memberCount.toLocaleString()}{" "}
-                <span className="text-base text-muted-foreground">{memberLabel}</span>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              {community.creator && (
+                <span>by {community.creator.name}</span>
+              )}
+              {community.creator && (
+                <span>•</span>
+              )}
+              <Users className="h-4 w-4" />
+              <span>
+                {memberCount.toLocaleString()}{" "}{memberLabel}
               </span>
             </div>
 
@@ -196,10 +202,15 @@ export function CommunityHeader({
               </p>
             )}
 
-            <div className="flex flex-wrap items-center gap-3 mt-4">
+            <div className="mt-4 flex flex-wrap items-center gap-3">
               {/* Join Community Button - hidden for owners */}
               {membershipLoading ? (
-                <Button size="default" variant="outline" disabled className="px-6 py-2">
+                <Button
+                  size="default"
+                  variant="outline"
+                  disabled
+                  className="px-6 py-2"
+                >
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Loading...
                 </Button>
@@ -207,7 +218,10 @@ export function CommunityHeader({
                 userRole !== "owner" && (
                   <>
                     {isMember ? (
-                      <AlertDialog open={isLeaveDialogOpen} onOpenChange={setIsLeaveDialogOpen}>
+                      <AlertDialog
+                        open={isLeaveDialogOpen}
+                        onOpenChange={setIsLeaveDialogOpen}
+                      >
                         <AlertDialogTrigger asChild>
                           <Button
                             size="default"
@@ -229,7 +243,9 @@ export function CommunityHeader({
                           <AlertDialogHeader>
                             <AlertDialogTitle>Leave Community</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to leave {community.name}? You might lose access to community posts, courses, and member-only content.
+                              Are you sure you want to leave {community.name}?
+                              You might lose access to community posts, courses,
+                              and member-only content.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -275,20 +291,34 @@ export function CommunityHeader({
 
               {/* Legacy Request to Join Button (for custom use cases) */}
               {showRequestToJoin && !membershipLoading && !isMember && (
-                <Button size="default" onClick={onRequestToJoin} className="px-6 py-2">
+                <Button
+                  size="default"
+                  onClick={onRequestToJoin}
+                  className="px-6 py-2"
+                >
                   {requestToJoinLabel}
                 </Button>
               )}
 
               {/* Edit Community Button - only for owners */}
               {membershipLoading ? (
-                <Button size="default" variant="outline" disabled className="px-6 py-2">
+                <Button
+                  size="default"
+                  variant="outline"
+                  disabled
+                  className="px-6 py-2"
+                >
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Loading...
                 </Button>
               ) : (
                 userRole === "owner" && (
-                  <Button asChild size="default" variant="outline" className="px-6 py-2">
+                  <Button
+                    asChild
+                    size="default"
+                    variant="outline"
+                    className="px-6 py-2"
+                  >
                     <Link href={`/dashboard/admin/communities/${community.id}`}>
                       <Edit className="mr-2 h-4 w-4" />
                       Edit Community
@@ -300,7 +330,11 @@ export function CommunityHeader({
               <AboutCommunityDialog
                 community={community}
                 trigger={
-                  <Button variant="link" size="default" className="px-0 text-primary">
+                  <Button
+                    variant="link"
+                    size="default"
+                    className="text-primary px-0"
+                  >
                     About
                   </Button>
                 }

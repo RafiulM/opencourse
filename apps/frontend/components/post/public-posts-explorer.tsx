@@ -18,7 +18,8 @@ import {
 } from "lucide-react"
 import { PostCard } from "./post-card"
 import { usePosts } from "@/hooks/use-posts"
-import { VisibilityFilter, type VisibilityFilter } from "./visibility-filter"
+import { VisibilityFilter } from "./visibility-filter"
+import type { VisibilityFilter as VisibilityFilterType } from "./visibility-filter"
 
 interface PublicPostsExplorerProps {
   showHeader?: boolean
@@ -55,16 +56,15 @@ export function PublicPostsExplorer({
     sort: [{ field: "publishedAt", order: "desc" }],
   })
 
-  const posts = postsData?.data?.posts ?? []
-  const pagination = postsData?.data?.pagination
-  const postsTotal = pagination?.totalItems ?? posts.length
+  const posts = postsData?.data ?? []
+  const postsTotal = postsData?.totalCount ?? posts.length
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage)
   }
 
   // Only show pagination controls if we're not limiting to a small number of posts
-  const showPagination = maxPosts >= 12 && pagination && pagination.totalPages > 1
+  const showPagination = maxPosts >= 12
 
   if (showHeader) {
     return (
@@ -106,8 +106,7 @@ export function PublicPostsExplorer({
           postsError={postsError}
           postsTotal={postsTotal}
           showPagination={showPagination}
-          pagination={pagination}
-          page={page}
+                    page={page}
           handlePageChange={handlePageChange}
           maxPosts={maxPosts}
         />
@@ -122,8 +121,7 @@ export function PublicPostsExplorer({
       postsError={postsError}
       postsTotal={postsTotal}
       showPagination={showPagination}
-      pagination={pagination}
-      page={page}
+            page={page}
       handlePageChange={handlePageChange}
       maxPosts={maxPosts}
       className={className}

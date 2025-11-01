@@ -8,6 +8,7 @@ import scoreboardRouter from './scoreboard';
 import uploadsRouter from './uploads';
 import postsRouter from './posts';
 import commentsRouter from './comments';
+import usersRouter from './users';
 
 const router: Router = Router();
 
@@ -50,7 +51,8 @@ router.get('/', (req, res) => {
         '/api/scoreboard',
         '/api/uploads',
         '/api/posts',
-        '/api/comments'
+        '/api/comments',
+        '/api/users'
       ]
     }
   });
@@ -66,5 +68,6 @@ router.use('/scoreboard', scoreboardRouter);
 router.use('/uploads', uploadsRouter);
 router.use('/posts', postsRouter);
 router.use('/comments', commentsRouter);
+router.use('/users', usersRouter);
 
 export default router;

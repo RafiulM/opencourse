@@ -275,7 +275,7 @@ export default function CommunityDetailPageClient({ id }: CommunityDetailPageCli
                 <FileText className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <p className="text-sm font-medium">Posts</p>
-                  <p className="text-2xl font-bold">{postsResponse?.data?.pagination?.totalItems || 0}</p>
+                  <p className="text-2xl font-bold">{postsResponse?.totalCount || 0}</p>
                 </div>
               </div>
 
@@ -451,7 +451,7 @@ export default function CommunityDetailPageClient({ id }: CommunityDetailPageCli
         </div>
       </CardHeader>
       <CardContent>
-        {postsResponse?.data?.posts?.length === 0 ? (
+        {postsResponse?.data?.length === 0 ? (
           <div className="text-center py-6">
             <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-2 text-sm font-semibold">No posts</h3>
@@ -481,7 +481,7 @@ export default function CommunityDetailPageClient({ id }: CommunityDetailPageCli
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {postsResponse?.data?.posts?.map((post) => (
+                {postsResponse?.data?.map((post) => (
                   <TableRow key={post.id}>
                     <TableCell>
                       <div className="max-w-md">
@@ -606,8 +606,8 @@ export default function CommunityDetailPageClient({ id }: CommunityDetailPageCli
           </Link>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge variant={community.isActive ? "default" : "secondary"}>
-            {community.isActive ? "Active" : "Inactive"}
+          <Badge variant="default">
+            Active
           </Badge>
           <Link href={`/dashboard/admin/communities/${community.id}/edit`}>
             <Button variant="outline">

@@ -32,8 +32,6 @@ export default function AdminDashboardClient() {
   const { data: session } = useSession()
   const userId = session?.user?.id
 
-  console.log({ session })
-
   const { data: communitiesData } = useCommunities(1, 100, {
     createdBy: userId,
   }) // Get user's communities for accurate count
@@ -55,18 +53,18 @@ export default function AdminDashboardClient() {
   const contentItemsCount = totalContentItems + totalQuizzes
 
   // Real data for posts and comments
-  const totalPosts = postsData?.data?.pagination?.totalItems || 0
+  const totalPosts = postsData?.totalCount || 0
   const totalComments =
-    postsData?.data?.posts?.reduce(
+    postsData?.data?.reduce(
       (sum, post) => sum + (post.commentsCount || 0),
       0
     ) || 0
 
   // Calculate published and draft posts from real data
   const publishedPosts =
-    postsData?.data?.posts?.filter((post) => post.isPublished)?.length || 0
+    postsData?.data?.filter((post) => post.isPublished)?.length || 0
   const draftPosts =
-    postsData?.data?.posts?.filter((post) => !post.isPublished)?.length || 0
+    postsData?.data?.filter((post) => !post.isPublished)?.length || 0
 
   // Note: reported comments, approved/pending/rejected comments would need a separate API endpoint
   // For now, we'll show only total comments which we have real data for

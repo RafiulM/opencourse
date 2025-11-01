@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { formatDistanceToNow } from "date-fns"
-import { Heart, MessageCircle, Eye, Calendar, User } from "lucide-react"
+import { Calendar, User } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { Post } from "@/lib/types"
@@ -106,22 +106,6 @@ export function PostView({ post, className }: PostViewProps) {
         </div>
       )}
 
-      {/* Engagement Stats */}
-      <div className="text-muted-foreground flex items-center gap-6 border-b pb-6 text-sm">
-        <div className="flex items-center gap-2">
-          <Eye className="h-4 w-4" />
-          <span>{post.viewsCount || 0} views</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Heart className="h-4 w-4" />
-          <span>{post.likesCount || 0} likes</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <MessageCircle className="h-4 w-4" />
-          <span>{post.commentsCount || 0} comments</span>
-        </div>
-      </div>
-
       {/* Post Content */}
       <div className="prose prose-gray dark:prose-invert max-w-none">
         {post.content ? (
@@ -169,9 +153,9 @@ export function PostView({ post, className }: PostViewProps) {
                   {children}
                 </blockquote>
               ),
-              code: ({ inline, className, children, ...props }) => {
+              code: ({ className, children, ...props }: any) => {
                 const match = /language-(\w+)/.exec(className || "")
-                return !inline && match ? (
+                return match ? (
                   <pre className="mb-4 overflow-x-auto rounded-md bg-gray-100 p-4 dark:bg-gray-800">
                     <code className={className} {...props}>
                       {children}
@@ -238,28 +222,6 @@ export function PostView({ post, className }: PostViewProps) {
         ) : (
           <div className="text-muted-foreground py-8 text-center">
             <p>Content is only available to community members.</p>
-          </div>
-        )}
-      </div>
-
-      {/* Comments Section */}
-      <div className="border-t pt-6">
-        <h3 className="mb-4 text-lg font-semibold">
-          Comments ({post.commentsCount || 0})
-        </h3>
-
-        {post.allowComments ? (
-          <div className="text-muted-foreground py-8 text-center">
-            <MessageCircle className="mx-auto mb-4 h-12 w-12 opacity-50" />
-            <p>Comments are coming soon!</p>
-            <p className="text-sm">
-              You'll be able to discuss this post here once our comment system
-              is ready.
-            </p>
-          </div>
-        ) : (
-          <div className="text-muted-foreground py-8 text-center">
-            <p>Comments are disabled for this post.</p>
           </div>
         )}
       </div>

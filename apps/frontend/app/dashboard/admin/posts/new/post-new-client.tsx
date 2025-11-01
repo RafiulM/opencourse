@@ -90,10 +90,10 @@ function NewPostPageContent() {
     title: "",
     content: "",
     excerpt: "",
-    postType: "general",
+    postType: "general" as "resource" | "general" | "announcement" | "discussion",
     tags: [],
     allowComments: true,
-    visibility: "community",
+    visibility: "community" as "community" | "public",
     isPublished: false,
     attachments: [],
   })

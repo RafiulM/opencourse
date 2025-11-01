@@ -85,8 +85,8 @@ export async function generateMetadata({
         siteName: post.community?.name || "OpenCourse Community",
         images:
           post.attachments
-            ?.filter((a) => a.type === "image")
-            .map((a) => ({
+            ?.filter((a: { type: string }) => a.type === "image")
+            .map((a: any) => ({
               url: a.upload?.url || "",
               width: 1200,
               height: 630,
@@ -102,8 +102,8 @@ export async function generateMetadata({
           : undefined,
         images:
           post.attachments
-            ?.filter((a) => a.type === "image")
-            .map((a) => a.upload?.url || "") || [],
+            ?.filter((a: { type: string }) => a.type === "image")
+            .map((a: any) => a.upload?.url || "") || [],
       },
     }
   } catch (error) {
