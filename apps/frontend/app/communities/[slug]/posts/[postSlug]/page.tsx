@@ -1,5 +1,6 @@
 import { Metadata } from "next"
 import { PostDetailPageClient } from "./post-detail-page-client"
+import { isMembershipRequiredOriginalError } from "@/lib/membership-access"
 
 interface PostDetailPageProps {
   params: Promise<{
@@ -42,10 +43,8 @@ export async function generateMetadata({
         try {
           const errorText = await response.text()
           const errorData = JSON.parse(errorText)
-          if (
-            errorData?.error?.details?.originalError ===
-            "Authentication required for community posts"
-          ) {
+          const originalError = errorData?.error?.details?.originalError
+          if (isMembershipRequiredOriginalError(originalError)) {
             // Return generic metadata - the client component will handle redirect
             return {
               title: `${community.name} - Community Post`,

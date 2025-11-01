@@ -37,6 +37,7 @@ import {
   PostLikesResponse,
   CommentLikeResponse,
 } from "./types"
+import { isMembershipRequiredOriginalError } from "./membership-access"
 
 interface ApiClientConfig {
   baseURL?: string
@@ -120,21 +121,26 @@ export class ApiClient {
         }
 
         // Handle 500 errors with authentication required message
+        const originalError = errorData?.error?.details?.originalError
+
         if (
           response.status === 500 &&
-          errorData?.error?.details?.originalError ===
-            "Authentication required for community posts"
+          isMembershipRequiredOriginalError(originalError)
         ) {
-          const error = new Error(
-            "Authentication required for community posts"
-          ) as any
+          const fallbackMessage =
+            originalError || "Authentication required for community posts"
+          const error = new Error(fallbackMessage) as any
           error.status = 500
-          error.code = "AUTHENTICATION_REQUIRED"
-          error.type = errorData.error.type || "DATABASE_ERROR"
+          error.code =
+            originalError === "Authentication required for community posts"
+              ? "AUTHENTICATION_REQUIRED"
+              : "ACCESS_DENIED"
+          error.type = errorData?.error?.type || "DATABASE_ERROR"
           error.message =
-            errorData.error.message ||
-            "Authentication required for community posts"
-          error.details = errorData.error
+            errorData?.error?.message || fallbackMessage
+          if (errorData?.error) {
+            error.details = errorData.error
+          }
           throw error
         }
 

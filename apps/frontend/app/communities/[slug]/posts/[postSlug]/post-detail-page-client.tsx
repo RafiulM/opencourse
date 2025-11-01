@@ -25,6 +25,7 @@ import {
   usePostErrorHandler,
 } from "@/components/post/post-error-boundary"
 import { toast } from "sonner"
+import { isMembershipRequiredError } from "@/lib/membership-access"
 
 interface PostDetailPageClientProps {
   communitySlug: string
@@ -40,7 +41,6 @@ export function PostDetailPageClient({
     useCommunityBySlug(communitySlug)
   const community = communityData?.data
   const communityId = community?.id
-  const { handlePostError } = usePostErrorHandler()
   const {
     data: postData,
     isLoading: postLoading,
@@ -59,16 +59,7 @@ export function PostDetailPageClient({
   // Handle immediate redirect for authentication errors
   useEffect(() => {
     if (postError) {
-      const isAuthError =
-        postError?.code === "AUTHENTICATION_REQUIRED" ||
-        postError?.code === "ACCESS_DENIED" ||
-        postError?.details?.originalError ===
-          "Authentication required for community posts" ||
-        (postError?.type === "DATABASE_ERROR" &&
-          postError?.details?.originalError ===
-            "Authentication required for community posts")
-
-      if (isAuthError) {
+      if (isMembershipRequiredError(postError)) {
         // Show toast notification
         toast.error("You must join this community to view this post")
 
@@ -105,16 +96,7 @@ export function PostDetailPageClient({
 
   // Show loading state while checking authentication or redirecting
   if (postError) {
-    const isAuthError =
-      postError?.code === "AUTHENTICATION_REQUIRED" ||
-      postError?.code === "ACCESS_DENIED" ||
-      postError?.details?.originalError ===
-        "Authentication required for community posts" ||
-      (postError?.type === "DATABASE_ERROR" &&
-        postError?.details?.originalError ===
-          "Authentication required for community posts")
-
-    if (isAuthError) {
+    if (isMembershipRequiredError(postError)) {
       return (
         <div className="bg-background min-h-screen">
           <Navbar />
