@@ -41,7 +41,7 @@ export function PostView({ post, className }: PostViewProps) {
       <h1 className="mb-4 text-3xl font-bold leading-tight">{post.title}</h1>
 
       {/* Author and Meta Info */}
-      <div className="flex items-center justify-between gap-4 border-b pb-6">
+      <div className="flex flex-col gap-4 border-b pb-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <Avatar className="h-8 w-8 flex-shrink-0">
             <AvatarImage src={post.author?.image} alt={displayName} />
@@ -60,7 +60,7 @@ export function PostView({ post, className }: PostViewProps) {
                 </Badge>
               )}
             </div>
-            <div className="text-muted-foreground flex items-center gap-2 text-xs">
+            <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs sm:flex-nowrap">
               <time className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
                 {fullDate}
@@ -77,7 +77,7 @@ export function PostView({ post, className }: PostViewProps) {
           </div>
         </div>
 
-        <div className="flex flex-shrink-0 items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:flex-shrink-0">
           {post.isPinned && (
             <Badge variant="secondary" className="text-xs">
               Pinned
