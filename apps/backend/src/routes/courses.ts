@@ -1,10 +1,37 @@
 import { Router, Request, Response } from 'express';
 import { CourseService, CourseModuleService, CourseMaterialService } from '../services/course';
-import { AppError, formatErrorResponse, handleDatabaseError } from '../lib/errors';
+import { AppError, createForbiddenError, formatErrorResponse, handleDatabaseError } from '../lib/errors';
 import { validatePaginationParams, validateCourseQueryOptions } from '../lib/validation';
 import { authenticate, optionalAuth } from '../middleware/auth';
 
 const router: Router = Router();
+
+/**
+ * Loads a course and verifies the authenticated user is its instructor.
+ * Sends a 404 when the course does not exist and a 403 when the caller
+ * is not the course instructor. Returns the course on success, or null
+ * when a response has already been sent.
+ */
+const loadOwnedCourse = async (req: Request, res: Response, courseId: string) => {
+  const course = await CourseService.getCourseById(courseId);
+  if (!course) {
+    const errorResponse = formatErrorResponse(
+      new AppError('Course not found', 404, 'RESOURCE_NOT_FOUND' as any)
+    );
+    res.status(404).json(errorResponse);
+    return null;
+  }
+
+  if (course.instructorId !== req.user!.id) {
+    const errorResponse = formatErrorResponse(
+      createForbiddenError('Access forbidden - only the course instructor can perform this action')
+    );
+    res.status(403).json(errorResponse);
+    return null;
+  }
+
+  return course;
+};
 
 // Course Routes
 
@@ -388,9 +415,14 @@ router.get('/:id/content', optionalAuth, async (req, res) => {
  */
 router.put('/:id', authenticate, async (req, res) => {
   try {
-    // TODO: Add ownership check - only course instructor should be able to update
-    
-    const course = await CourseService.updateCourse(req.params.id, req.body);
+    const existingCourse = await loadOwnedCourse(req, res, req.params.id);
+    if (!existingCourse) return;
+
+    // Never allow course ownership to be reassigned through an update
+    const updateData = { ...req.body };
+    delete updateData.instructorId;
+
+    const course = await CourseService.updateCourse(req.params.id, updateData);
     if (!course) {
       const errorResponse = formatErrorResponse(
         new AppError('Course not found', 404, 'RESOURCE_NOT_FOUND' as any)
@@ -433,8 +465,9 @@ router.put('/:id', authenticate, async (req, res) => {
  */
 router.delete('/:id', authenticate, async (req, res) => {
   try {
-    // TODO: Add ownership check - only course instructor should be able to delete
-    
+    const existingCourse = await loadOwnedCourse(req, res, req.params.id);
+    if (!existingCourse) return;
+
     const course = await CourseService.deleteCourse(req.params.id);
     if (!course) {
       const errorResponse = formatErrorResponse(
@@ -494,8 +527,9 @@ router.delete('/:id', authenticate, async (req, res) => {
  */
 router.post('/:courseId/modules', authenticate, async (req, res) => {
   try {
-    // TODO: Add ownership check - only course instructor should be able to add modules
-    
+    const existingCourse = await loadOwnedCourse(req, res, req.params.courseId);
+    if (!existingCourse) return;
+
     const module = await CourseModuleService.createCourseModule({
       courseId: req.params.courseId,
       ...req.body
